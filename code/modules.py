@@ -175,6 +175,55 @@ class BasicAttn(object):
 
             return attn_dist, output
 
+class AoA(object):
+
+    def __init__(self, keep_prob, query_vec_size, doc_vec_size, vocab_size):
+        self.keep_prob = keep_prob
+        self.query_vec_size = query_vec_size
+        self.doc_vec_size = doc_vec_size
+        self.vocab_size = vocab_size # this is len(self.word2id)
+
+    def build_graph(self, orig_doc, document, queries, values_mask):
+
+        with vs.variable_scope("AoA"):
+
+            # Calculate attention distribution
+            queries = tf.transpose(queries, perm=[0, 2, 1]) # (batch_size, doc_vec_size, num_queries)
+            M = tf.matmul(document, queries) # shape (batch_size, num_docs, num_queries)
+
+            # Column-wise softmax for Document to Query attention
+            doc_attn = tf.nn.softmax(M, axis=2) # shape (batch_size, num_docs, num_queries)
+
+            # Row-wise softmax for Query to Document attention
+            q_attn = tf.nn.softmax(M, axis=1) # shape (batch_size, num_docs, num_queries)
+
+            # Reduce q_attn by taking column-wise average
+            q_attn_reduced = tf.nn.reduce_mean(q_attn, axis=1, keepdims=True) # shape (batch_size, 1, num_queries)
+            q_attn_reduced = tf.transpose(a_attn_reduced, perm=[0, 2, 1]) # shape (batch_size, num_queries, 1)
+
+            # Dot product between doc_attn and q_attn_reduced
+            s = tf.matmul(doc_attn, q_attn_reduced) # shape (batch_size, num_docs, 1)
+
+            # Sum-attention layer:
+            # First, unstack s so that we can look at repeated instances
+            unstacked = zip(tf.unstack(s, axis=0), tf.unstack(orig_doc, axis=0))
+
+            # Second, we perform a segmented sum
+            unstacked = [ tf.unsorted_segment_sum(attn, ids, self.vocab_size) for attn, ids in unstacked ]
+
+            # Now, we restack back into s
+            s_summed = tf.stack(unstacked)
+
+            # Finally, use logits mask to do softmax just on non-padded data
+            attn_logits_mask = tf.expand_dims(values_mask, 1)
+            _, attn_dist = masked_softmax(s_summed, attn_logits_mask, 2)
+
+            # OUTPUT
+            output = tf.matmul(attn_dist, values)
+            output = tf.nn.dropout(output, self.keep_prob)
+
+            return attn_dist, output
+
 
 def masked_softmax(logits, mask, dim):
     """

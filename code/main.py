@@ -26,6 +26,7 @@ import logging
 import tensorflow as tf
 
 from qa_model import QAModel
+from qaoa_model import QAoAModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
@@ -133,7 +134,8 @@ def main(unused_argv):
     dev_ans_path = os.path.join(FLAGS.data_dir, "dev.span")
 
     # Initialize model
-    qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
+    # qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
+    qaoa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
 
     # Some GPU settings
     config=tf.ConfigProto()
@@ -159,10 +161,12 @@ def main(unused_argv):
         with tf.Session(config=config) as sess:
 
             # Load most recent model
-            initialize_model(sess, qa_model, FLAGS.train_dir, expect_exists=False)
+            # initialize_model(sess, qa_model, FLAGS.train_dir, expect_exists=False)
+            initialize_model(sess, qaoa_model, FLAGS.train_dir, expect_exists=False)
 
             # Train
-            qa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
+            # qa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
+            qaoa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
 
 
     elif FLAGS.mode == "show_examples":

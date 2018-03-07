@@ -193,10 +193,10 @@ class AoA(object):
             M = tf.transpose(M, perm=[0, 2, 1])
 
             # Column-wise softmax for Document to Query attention
-            doc_attn = tf.nn.softmax(M, dim=2) # shape (batch_size, num_docs, num_queries)
+            doc_attn = tf.nn.softmax(M, dim=1) # shape (batch_size, num_docs, num_queries)
 
             # Row-wise softmax for Query to Document attention
-            q_attn = tf.nn.softmax(M, dim=1) # shape (batch_size, num_docs, num_queries)
+            q_attn = tf.nn.softmax(M, dim=2) # shape (batch_size, num_docs, num_queries)
 
             # Reduce q_attn by taking column-wise average
             q_attn_reduced = tf.reduce_mean(q_attn, axis=1, keep_dims=True) # shape (batch_size, 1, num_queries)
@@ -204,16 +204,28 @@ class AoA(object):
 
             # Dot product between doc_attn and q_attn_reduced
             s = tf.matmul(doc_attn, q_attn_reduced) # shape (batch_size, num_docs, 1)
+            # s = tf.squeeze(s, 2)
+
+            # s_partitioned = tf.dynamic_partition(s, tf.range(tf.shape(s)[0]), 100)
+            # orig_doc_partitioned = tf.dynamic_partition(orig_doc, tf.range(tf.shape(orig_doc)[0]), 100)
 
             # Sum-attention layer:
             # First, unstack s so that we can look at repeated instances
-            unstacked = zip(tf.unstack(s, 100), tf.unstack(orig_doc, 100))
+            # unstacked = zip(tf.unstack(s, 100), tf.unstack(orig_doc, 100))
+            # unstacked = zip(s_partitioned, orig_doc_partitioned)
+
 
             # Second, we perform a segmented sum
-            unstacked = [ tf.gather(tf.unsorted_segment_sum(attn, ids, self.vocab_size), ids) for attn, ids in unstacked ]
+            # unstacked = [ tf.gather(tf.unsorted_segment_sum(attn, ids, self.vocab_size), ids) for attn, ids in unstacked ]
+
+            def sum_attention(elems):
+                attns, ids = elems
+                return tf.gather(tf.unsorted_segment_sum(attns, ids, self.vocab_size), ids)
+            s_summed = tf.map_fn(sum_attention, elems=(s, orig_doc), dtype=tf.float32)
 
             # Third, we restack back into s
-            s_summed = tf.stack(unstacked)
+            # s_summed = tf.stack(unstacked)
+            # s_summed = tf.dynamic_stitch(range(100), unstacked)
 
             # Now, reconfigure size for correct return value size
 

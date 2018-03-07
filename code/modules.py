@@ -183,14 +183,13 @@ class AoA(object):
         self.doc_vec_size = doc_vec_size
         self.vocab_size = vocab_size # this is len(self.word2id)
 
-    def build_graph(self, orig_doc, documents, queries, values_mask):
+    def build_graph(self, orig_doc, queries, documents, values_mask):
 
         with vs.variable_scope("AoA"):
 
             # Calculate attention distribution
             queries = tf.transpose(queries, perm=[0, 2, 1]) # (batch_size, doc_vec_size, num_queries)
             M = tf.matmul(documents, queries) # shape (batch_size, num_docs, num_queries)
-            M = tf.transpose(M, perm=[0, 2, 1])
 
             # Column-wise softmax for Document to Query attention
             doc_attn = tf.nn.softmax(M, dim=2) # shape (batch_size, num_docs, num_queries)
@@ -222,10 +221,74 @@ class AoA(object):
             _, attn_dist = masked_softmax(s_summed, attn_logits_mask, 2)
 
             # OUTPUT
-            output = tf.matmul(attn_dist, documents)
+            output = tf.matmul(attn_dist, queries)
             output = tf.nn.dropout(output, self.keep_prob)
 
             return attn_dist, output
+
+
+class BiDAF(object):
+
+    def __init__(self, keep_prob, query_vec_size, doc_vec_size):
+        self.keep_prob = keep_prob
+        self.query_vec_size = query_vec_size
+        self.doc_vec_size = doc_vec_size
+
+
+    def build_graph(self, documents, queries, documents_mask, queries_mask):
+
+        with vs.variable_scope("BiDAF"):
+
+
+            # Calculate similarity matrix S:
+
+            # Tile queries and documents so that they have shape (batch_size, num_docs*num_queries, doc_vec_size)
+            query_shape = queries.get_shape()
+            doc_shape = documents.get_shape()
+
+            # Repeat the whole query matrix num_docs times
+            aug_queries = tf.tile(queries, [1, doc_shape[1], 1]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+
+            # Repeat each row of documents num_queries times
+            aug_docs = tf.reshape(documents, [-1, doc_shape[1]*doc_shape[2], 1]) # shape (batch_size, num_docs*2*hidden, 1)
+            aug_docs = tf.tile(aug_docs, [1, 1, query_shape[1]]) # shape (batch_size, num_docs*2*hidden, num_queries)
+            aug_docs = tf.reshape(tf.transpose(aug_docs, perm=[0, 2, 1]), [-1, doc_shape[1]*query_shape[1], self.doc_vec_size]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+
+            # Perform element-wise multiplication on augmented data
+            element_mult = tf.multiply(aug_queries, aug_docs) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+
+            # Concatenate augmented data and element_mult for S computation
+            concat = tf.concat([aug_docs, aug_queries, element_mult], axis=2) # shape (batch_size, num_docs*num_queries, 6*doc_vec_size)
+
+            # Weights for similarity matrix
+            W_sim = tf.get_variable("W_sim", shape=(3*self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+
+            # Create S using weights and concat
+            S = tf.tensordot(concat, W_sim, axes=[[2], [0]]) # shape (batch_size, num_docs*num_queries, 1)
+            S = tf.reshape(S, [-1, doc_shape[1], query_shape[1]]) # shape (batch_size, num_docs, num_queries)
+
+            # Compute softmax row-wise for Context to Query
+            # C2Q = tf.nn.softmax(S, dim=2) # shape (num_docs, num_queries)
+            q_mask = tf.transpose(tf.tile(tf.expand_dims(queries_mask, -1), [1, 1, doc_shape[1]]), perm=[0,2,1]) # shape (batch_size, num_docs, num_queries)
+            d_mask = tf.tile(tf.expand_dims(documents_mask, -1), [1, 1, query_shape[1]])
+            mask = tf.cast(tf.cast(q_mask, tf.bool) & tf.cast(d_mask, tf.bool), tf.int32) # shape (batch_size, num_docs, num_queries)
+
+            # Create Context to Query attention matrix
+            _, C2Q = masked_softmax(S, mask, 2)
+            a = tf.matmul(C2Q, queries) # shape (num_docs, doc_vec_size)
+
+            # Take max across rows (i.e. max similarity for a single context word for all query words) and compute beta
+            masked_S = tf.multiply(S, tf.cast(mask, tf.float32)) # shape (batch_size, num_docs, num_queries)
+            m = tf.reduce_max(masked_S, axis=2, keep_dims=True) # shape (batch_size, num_docs, 1)
+            beta = tf.nn.softmax(m, dim=1) # shape (batch_size, num_docs, 1)
+            # beta = masked_softmax(m, document_mask, 1) # shape (batch_size, num_docs, 1)
+            cprime = tf.matmul(tf.transpose(documents, perm=[0, 2, 1]), beta) # shape (batch_size, doc_vec_size, 1)
+
+            # Compute final output b by concatenation
+            doc_a_mult, doc_cp_mult = tf.multiply(documents, a), tf.multiply(documents, tf.transpose(cprime, perm=[0, 2, 1]))
+            b = tf.concat([documents, a, doc_a_mult, doc_cp_mult], axis=2) # shape (batch_size, num_docs, 4*doc_vec_size)
+
+            return None, b
 
 
 def masked_softmax(logits, mask, dim):

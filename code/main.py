@@ -135,7 +135,7 @@ def main(unused_argv):
 
     # Initialize model
     # qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
-    qaoa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
+    qaoa_model = QAoAModel(FLAGS, id2word, word2id, emb_matrix)
 
     # Some GPU settings
     config=tf.ConfigProto()

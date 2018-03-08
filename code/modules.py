@@ -114,6 +114,22 @@ class SimpleSoftmaxLayer(object):
 
             return masked_logits, prob_dist
 
+class AnsPtr(object):
+
+    def __init__(self, hidden_size, keep_prob):
+        self.hidden_size = hidden_size
+        self.keep_prob = keep_prob
+        self.rnn_cell = rnn_cell.GRUCell(self.hidden_size)
+        self.rnn_cell = DropoutWrapper(self.rnn_cell, input_keep_prob=self.keep_prob)
+
+    def build_graph(self, inputs, masks):
+
+        with vs.variable_scope("AnsPtr"):
+            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+
+            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32)
+
+            return masked_logits_start, prob_dist_start, masked_logits_end, prob_dist_end
 
 class BasicAttn(object):
     """Module for basic attention.

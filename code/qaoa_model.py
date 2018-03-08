@@ -158,6 +158,8 @@ class QAoAModel(object):
             softmax_layer_end = SimpleSoftmaxLayer()
             self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
 
+        # ans_ptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
+        # self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = ans_ptr_layer.build_graph(blended_reps_final, self.context_mask)
 
     def add_loss(self):
         """

@@ -30,12 +30,12 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, AoA
+from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, AnsPtr
 
 logging.basicConfig(level=logging.INFO)
 
 
-class QAoAModel(object):
+class AnsPtrModel(object):
     """Top-level Question Answering module"""
 
     def __init__(self, FLAGS, id2word, word2id, emb_matrix):
@@ -135,8 +135,8 @@ class QAoAModel(object):
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
         # Use context hidden states to attend to question hidden states
-        attn_layer = AoA(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2, len(self.word2id))
-        _, attn_output = attn_layer.build_graph(self.context_ids, question_hiddens, context_hiddens, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*2)
+        attn_layer = BasicAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
+        _, _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
 
         # Concat attn_output to context_hiddens to get blended_reps
         blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*4)
@@ -148,18 +148,18 @@ class QAoAModel(object):
 
         # Use softmax layer to compute probability distribution for start location
         # Note this produces self.logits_start and self.probdist_start, both of which have shape (batch_size, context_len)
-        with vs.variable_scope("StartDist"):
-            softmax_layer_start = SimpleSoftmaxLayer()
-            self.logits_start, self.probdist_start = softmax_layer_start.build_graph(blended_reps_final, self.context_mask)
+        # with vs.variable_scope("StartDist"):
+        #     softmax_layer_start = SimpleSoftmaxLayer()
+        #     self.logits_start, self.probdist_start = softmax_layer_start.build_graph(blended_reps_final, self.context_mask)
 
         # Use softmax layer to compute probability distribution for end location
         # Note this produces self.logits_end and self.probdist_end, both of which have shape (batch_size, context_len)
-        with vs.variable_scope("EndDist"):
-            softmax_layer_end = SimpleSoftmaxLayer()
-            self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
+        # with vs.variable_scope("EndDist"):
+        #     softmax_layer_end = SimpleSoftmaxLayer()
+        #     self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
 
-        # ans_ptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
-        # self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = ans_ptr_layer.build_graph(blended_reps_final, self.context_mask)
+        ansptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
+        self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = ansptr_layer.build_graph(blended_reps_final, self.context_mask)
 
     def add_loss(self):
         """

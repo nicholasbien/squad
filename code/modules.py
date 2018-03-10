@@ -233,7 +233,7 @@ class AoA(object):
             _, attn_dist = masked_softmax(s_summed, attn_logits_mask, 2)
 
             # OUTPUT
-            output = tf.matmul(attn_dist, queries)
+            output = tf.matmul(attn_dist, tf.transpose(queries, perm=[0,2,1]))
             output = tf.nn.dropout(output, self.keep_prob)
 
             return attn_dist, output

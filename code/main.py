@@ -49,7 +49,7 @@ tf.app.flags.DEFINE_integer("num_epochs", 0, "Number of epochs to train. 0 means
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
-tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
+tf.app.flags.DEFINE_integer("batch_size", 15, "Batch size to use")
 tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 600, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
@@ -153,8 +153,8 @@ def main(unused_argv):
         logging.getLogger().addHandler(file_handler)
 
         # Save a record of flags as a .json file in train_dir
-        with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
-            json.dump(FLAGS.__flags, fout)
+        # with open(os.path.join(FLAGS.train_dir, "flags.json"), 'w') as fout:
+        #     json.dump(FLAGS.__flags, fout)
 
         # Make bestmodel dir if necessary
         if not os.path.exists(bestmodel_dir):

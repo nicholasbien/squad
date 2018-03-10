@@ -303,25 +303,44 @@ class BiDAF(object):
             doc_shape = documents.get_shape()
 
             # Repeat the whole query matrix num_docs times
-            aug_queries = tf.tile(queries, [1, doc_shape[1], 1]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            # aug_queries = tf.tile(queries, [1, doc_shape[1], 1]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
 
             # Repeat each row of documents num_queries times
-            aug_docs = tf.reshape(documents, [-1, doc_shape[1]*doc_shape[2], 1]) # shape (batch_size, num_docs*2*hidden, 1)
-            aug_docs = tf.tile(aug_docs, [1, 1, query_shape[1]]) # shape (batch_size, num_docs*2*hidden, num_queries)
-            aug_docs = tf.reshape(tf.transpose(aug_docs, perm=[0, 2, 1]), [-1, doc_shape[1]*query_shape[1], self.doc_vec_size]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            # aug_docs = tf.reshape(documents, [-1, doc_shape[1]*doc_shape[2], 1]) # shape (batch_size, num_docs*2*hidden, 1)
+            # aug_docs = tf.tile(aug_docs, [1, 1, query_shape[1]]) # shape (batch_size, num_docs*2*hidden, num_queries)
+            # aug_docs = tf.reshape(tf.transpose(aug_docs, perm=[0, 2, 1]), [-1, doc_shape[1]*query_shape[1], self.doc_vec_size]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
 
             # Perform element-wise multiplication on augmented data
-            element_mult = tf.multiply(aug_queries, aug_docs) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            # element_mult = tf.multiply(aug_queries, aug_docs) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            element_mult_test = tf.expand_dims(documents, 2) * tf.expand_dims(queries, 1) # shape (batch_size, num_docs, num_queries, doc_vec_size)
+            # print element_mult.get_shape(), element_mult_test.get_shape()
+
+            W_sim_mult = tf.get_variable("W_sim_mult", shape=(self.query_vec_size,), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_mult = tf.tensordot(element_mult_test, W_sim_mult, axes=[[3],[0]])
+
+
+            # document_test = tf.tile(tf.expand_dims(documents, 2), [1, 1, query_shape[1], 1])
+            W_sim_docs = tf.get_variable("W_sim_docs", shape=(self.doc_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            # weighted_docs = tf.tensordot(document_test, W_sim_docs, axes=[[3],[0]])
+            weighted_docs = tf.tensordot(documents, W_sim_docs, [[2],[0]])
+
+            # queries_test = tf.tile(tf.expand_dims(queries, 1), [1, doc_shape[1], 1, 1])
+            W_sim_queries = tf.get_variable("W_sim_queries", shape=(self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            # weighted_queries = tf.tensordot(queries_test, W_sim_queries, [[3],[0]])
+            weighted_queries = tf.transpose(tf.tensordot(queries, W_sim_queries, [[2],[0]]), perm=[0,2,1])
+
+            S = weighted_mult + weighted_docs + weighted_queries
+
 
             # Concatenate augmented data and element_mult for S computation
-            concat = tf.concat([aug_docs, aug_queries, element_mult], axis=2) # shape (batch_size, num_docs*num_queries, 6*doc_vec_size)
+            # concat = tf.concat([aug_docs, aug_queries, element_mult], axis=2) # shape (batch_size, num_docs*num_queries, 6*doc_vec_size)
 
             # Weights for similarity matrix
-            W_sim = tf.get_variable("W_sim", shape=(3*self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            # W_sim = tf.get_variable("W_sim", shape=(3*self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
 
             # Create S using weights and concat
-            S = tf.tensordot(concat, W_sim, axes=[[2], [0]]) # shape (batch_size, num_docs*num_queries, 1)
-            S = tf.reshape(S, [-1, doc_shape[1], query_shape[1]]) # shape (batch_size, num_docs, num_queries)
+            # S = tf.tensordot(concat, W_sim, axes=[[2], [0]]) # shape (batch_size, num_docs*num_queries, 1)
+            # S = tf.reshape(S, [-1, doc_shape[1], query_shape[1]]) # shape (batch_size, num_docs, num_queries)
 
             # Compute softmax row-wise for Context to Query
             # C2Q = tf.nn.softmax(S, dim=2) # shape (num_docs, num_queries)

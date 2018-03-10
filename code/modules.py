@@ -127,9 +127,37 @@ class AnsPtr(object):
         with vs.variable_scope("AnsPtr"):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
+            # inputs is (batch_size, input_len, hidden_size)
+
+            # RNN timestep 1: feed context hidden states (inputs)
+            # outputs is (batch_size, input_len, hidden_size)
+            # stats is (batch_size, hidden_size)
             outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32)
 
-            return masked_logits_start, prob_dist_start, masked_logits_end, prob_dist_end
+            state = tf.expand_dims(state, axis=1)
+
+            # RNN hidden state attends to inputs to get start distribution
+            # attn_logits and attn_dist are (batch_size, 1, input_len)
+            # attn_output is (batch_size, 1, hidden_size)
+            attn_layer = BasicAttn(self.keep_prob, self.hidden_size*2, self.hidden_size*2)
+            attn_logits, attn_dist, attn_output = attn_layer.build_graph(inputs, masks, state)
+
+            start_logits = tf.squeeze(attn_logits)
+            start_dist = tf.squeeze(attn_dist)
+
+            # RNN timestep 2: feed attention output
+            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32)
+
+            state = tf.expand_dims(state, axis=1)
+
+            # new RNN hidden state attends to inputs to get end distribution
+            attn_layer = BasicAttn(self.keep_prob, self.hidden_size*2, self.hidden_size*2)
+            attn_logits, attn_dist, attn_output = attn_layer.build_graph(inputs, masks, state)
+
+            end_logits = tf.squeeze(attn_logits)
+            end_dist = tf.squeeze(attn_dist)
+
+            return start_logits, start_dist, end_logits, end_dist
 
 class BasicAttn(object):
     """Module for basic attention.
@@ -181,7 +209,7 @@ class BasicAttn(object):
             values_t = tf.transpose(values, perm=[0, 2, 1]) # (batch_size, value_vec_size, num_values)
             attn_logits = tf.matmul(keys, values_t) # shape (batch_size, num_keys, num_values)
             attn_logits_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, num_values)
-            _, attn_dist = masked_softmax(attn_logits, attn_logits_mask, 2) # shape (batch_size, num_keys, num_values). take softmax over values
+            attn_logits, attn_dist = masked_softmax(attn_logits, attn_logits_mask, 2) # shape (batch_size, num_keys, num_values). take softmax over values
 
             # Use attention distribution to take weighted sum of values
             output = tf.matmul(attn_dist, values) # shape (batch_size, num_keys, value_vec_size)
@@ -189,7 +217,7 @@ class BasicAttn(object):
             # Apply dropout
             output = tf.nn.dropout(output, self.keep_prob)
 
-            return attn_dist, output
+            return attn_logits, attn_dist, output
 
 class AoA(object):
 

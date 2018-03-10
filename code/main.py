@@ -28,6 +28,7 @@ import tensorflow as tf
 from qa_model import QAModel
 from qaoa_model import QAoAModel
 from bidaf_model import BiDAFModel
+from ansptr_model import AnsPtrModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
@@ -137,7 +138,8 @@ def main(unused_argv):
     # Initialize model
     # qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
     # qaoa_model = QAoAModel(FLAGS, id2word, word2id, emb_matrix)
-    bidaf_model = BiDAFModel(FLAGS, id2word, word2id, emb_matrix)
+    # bidaf_model = BiDAFModel(FLAGS, id2word, word2id, emb_matrix)
+    ansptr_model = AnsPtrModel(FLAGS, id2word, word2id, emb_matrix)
 
     # Some GPU settings
     config=tf.ConfigProto()
@@ -165,13 +167,14 @@ def main(unused_argv):
             # Load most recent model
             # initialize_model(sess, qa_model, FLAGS.train_dir, expect_exists=False)
             # initialize_model(sess, qaoa_model, FLAGS.train_dir, expect_exists=False)
-            initialize_model(sess, bidaf_model, FLAGS.train_dir, expect_exists=False)
+            # initialize_model(sess, bidaf_model, FLAGS.train_dir, expect_exists=False)
+            initialize_model(sess, ansptr_model, FLAGS.train_dir, expect_exists=False)
 
             # Train
             # qa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
             # qaoa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
-            bidaf_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
-
+            # bidaf_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
+            ansptr_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
 
     elif FLAGS.mode == "show_examples":
         with tf.Session(config=config) as sess:

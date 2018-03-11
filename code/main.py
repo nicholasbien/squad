@@ -29,6 +29,7 @@ from qa_model import QAModel
 from qaoa_model import QAoAModel
 from bidaf_model import BiDAFModel
 from ansptr_model import AnsPtrModel
+from combined_model import CompleteModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
@@ -44,12 +45,12 @@ EXPERIMENTS_DIR = os.path.join(MAIN_DIR, "experiments") # relative path of exper
 tf.app.flags.DEFINE_integer("gpu", 0, "Which GPU to use, if you have multiple.")
 tf.app.flags.DEFINE_string("mode", "train", "Available modes: train / show_examples / official_eval")
 tf.app.flags.DEFINE_string("experiment_name", "", "Unique name for your experiment. This will create a directory by this name in the experiments/ directory, which will hold all data related to this experiment")
-tf.app.flags.DEFINE_integer("num_epochs", 0, "Number of epochs to train. 0 means train indefinitely")
+tf.app.flags.DEFINE_integer("num_epochs", 50, "Number of epochs to train. 0 means train indefinitely")
 
 # Hyperparameters
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
-tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
+tf.app.flags.DEFINE_float("max_gradient_norm", 2.0, "Clip gradients to this norm.")
+tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
 tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 300, "The maximum context length of your model")
@@ -57,8 +58,8 @@ tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of 
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 
 # How often to print, save, eval
-tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")
-tf.app.flags.DEFINE_integer("save_every", 500, "How many iterations to do per save.")
+tf.app.flags.DEFINE_integer("print_every", 10, "How many iterations to do per print.")
+tf.app.flags.DEFINE_integer("save_every", 100, "How many iterations to do per save.")
 tf.app.flags.DEFINE_integer("eval_every", 2000, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
 tf.app.flags.DEFINE_integer("keep", 1, "How many checkpoints to keep. 0 indicates keep all (you shouldn't need to do keep all though - it's very storage intensive).")
 
@@ -89,16 +90,16 @@ def initialize_model(session, model, train_dir, expect_exists):
     print "Looking for model at %s..." % train_dir
     ckpt = tf.train.get_checkpoint_state(train_dir)
     v2_path = ckpt.model_checkpoint_path + ".index" if ckpt else ""
-    # if ckpt and (tf.gfile.Exists(ckpt.model_checkpoint_path) or tf.gfile.Exists(v2_path)):
-    #     print "Reading model parameters from %s" % ckpt.model_checkpoint_path
-    #     model.saver.restore(session, ckpt.model_checkpoint_path)
-    # else:
-    #     if expect_exists:
-    #         raise Exception("There is no saved checkpoint at %s" % train_dir)
-    #     else:
-    print "There is no saved checkpoint at %s. Creating model with fresh parameters." % train_dir
-    session.run(tf.global_variables_initializer())
-    print 'Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables())
+    if ckpt and (tf.gfile.Exists(ckpt.model_checkpoint_path) or tf.gfile.Exists(v2_path)):
+        print "Reading model parameters from %s" % ckpt.model_checkpoint_path
+        model.saver.restore(session, ckpt.model_checkpoint_path)
+    else:
+        if expect_exists:
+            raise Exception("There is no saved checkpoint at %s" % train_dir)
+        else:
+            print "There is no saved checkpoint at %s. Creating model with fresh parameters." % train_dir
+            session.run(tf.global_variables_initializer())
+            print 'Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables())
 
 
 def main(unused_argv):
@@ -138,9 +139,9 @@ def main(unused_argv):
     # Initialize model
     # qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
     # qaoa_model = QAoAModel(FLAGS, id2word, word2id, emb_matrix)
-    bidaf_model = BiDAFModel(FLAGS, id2word, word2id, emb_matrix)
+    # bidaf_model = BiDAFModel(FLAGS, id2word, word2id, emb_matrix)
     # ansptr_model = AnsPtrModel(FLAGS, id2word, word2id, emb_matrix)
-
+    complete_model = CompleteModel(FLAGS, id2word, word2id, emb_matrix)
     # Some GPU settings
     config=tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -167,14 +168,18 @@ def main(unused_argv):
             # Load most recent model
             # initialize_model(sess, qa_model, FLAGS.train_dir, expect_exists=False)
             # initialize_model(sess, qaoa_model, FLAGS.train_dir, expect_exists=False)
-            initialize_model(sess, bidaf_model, FLAGS.train_dir, expect_exists=False)
+            # initialize_model(sess, bidaf_model, FLAGS.train_dir, expect_exists=False)
             # initialize_model(sess, ansptr_model, FLAGS.train_dir, expect_exists=False)
+            # Complete model 
+            initialize_model(sess, complete_model, FLAGS.train_dir, expect_exists=False)
+
 
             # Train
             # qa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
             # qaoa_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
-            bidaf_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
+            # bidaf_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
             # ansptr_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
+            complete_model.train(sess, train_context_path, train_qn_path, train_ans_path, dev_qn_path, dev_context_path, dev_ans_path)
 
     elif FLAGS.mode == "show_examples":
         with tf.Session(config=config) as sess:

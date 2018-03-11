@@ -49,7 +49,7 @@ class RNNEncoder(object):
         self.rnn_cell_bw = rnn_cell.GRUCell(self.hidden_size)
         self.rnn_cell_bw = DropoutWrapper(self.rnn_cell_bw, input_keep_prob=self.keep_prob)
 
-    def build_graph(self, inputs, masks):
+    def build_graph(self, inputs, masks, scope_name="RNNEncoder"):
         """
         Inputs:
           inputs: Tensor shape (batch_size, seq_len, input_size)
@@ -61,11 +61,13 @@ class RNNEncoder(object):
           out: Tensor shape (batch_size, seq_len, hidden_size*2).
             This is all hidden states (fw and bw hidden states are concatenated).
         """
-        with vs.variable_scope("RNNEncoder"):
+        with vs.variable_scope(scope_name):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
             # Note: fw_out and bw_out are the hidden states for every timestep.
             # Each is shape (batch_size, seq_len, hidden_size).
+            print "inputs" , inputs.get_shape()
+            print "input_lens" , input_lens.get_shape()
             (fw_out, bw_out), _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw, self.rnn_cell_bw, inputs, input_lens, dtype=tf.float32)
 
             # Concatenate the forward and backward hidden states
@@ -216,6 +218,83 @@ class BasicAttn(object):
 
             # Apply dropout
             output = tf.nn.dropout(output, self.keep_prob)
+
+            return attn_logits, attn_dist, output
+
+
+class SelfAttn(object):
+    """Module for basic attention.
+
+    Note: in this module we use the terminology of "keys" and "values" (see lectures).
+    In the terminology of "X attends to Y", "keys attend to values".
+
+    In the baseline model, the keys are the context hidden states
+    and the values are the question hidden states.
+
+    We choose to use general terminology of keys and values in this module
+    (rather than context and question) to avoid confusion if you reuse this
+    module with other inputs.
+    """
+
+    def __init__(self, keep_prob, hidden_size):
+        """
+        Inputs:
+          keep_prob: tensor containing a single scalar that is the keep probability (for dropout)
+          key_vec_size: size of the key vectors. int
+          value_vec_size: size of the value vectors. int
+        """
+        self.keep_prob = keep_prob
+        self.hidden_size = hidden_size
+
+    def build_graph(self, values, values_mask):
+        """
+        Keys attend to values.
+        For each key, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, value_vec_size)
+
+        Outputs:
+          attn_dist: Tensor shape (batch_size, num_keys, num_values).
+            For each key, the distribution should sum to 1,
+            and should be 0 in the value locations that correspond to padding.
+          output: Tensor shape (batch_size, num_keys, hidden_size).
+            This is the attention output; the weighted sum of the values
+            (using the attention distribution as weights).
+        """
+        with vs.variable_scope("SelfAttn"):
+
+            #Create weight matrices W1 and W2
+            W1 = tf.get_variable(name="W1", shape=( self.hidden_size, self.hidden_size,))
+            V = tf.get_variable(name="V", shape=( self.hidden_size,))
+
+            values_t = tf.transpose(values, perm=[0, 2, 1]) # (batch_size, doc_size, hidden_size)
+
+            # Calculate attention distribution
+            g = tf.tensordot(values, W1, axes=[[2],[0]]) # (batch_size, doc_size, hidden_size)
+            print "g", g.get_shape()
+            a = tf.tensordot(V, tf.tanh(g), axes=[[0],[2]]) # shape (batch_size, 1, doc_size)
+            print "a",  a.get_shape()
+            attn_logits = tf.tensordot(values_t, a, axes=[[2], [0]]) # shape (batch_size, hidden_size, doc_size)
+            print "attn_logits",  attn_logits.get_shape()
+
+
+
+            attn_logits_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, num_values)
+            attn_logits, attn_dist = masked_softmax(attn_logits, attn_logits_mask, 2) # shape (batch_size, doc_size, hidden_size). take softmax over values
+            attn_logits = tf.transpose(attn_logits, perm=[0, 2, 1])
+            print("attn_shape", attn_logits.get_shape())
+            # Use attention distribution to take weighted sum of values
+            output = tf.matmul(attn_logits, values_t)
+
+            # output = tf.transpose(output, perm=[0, 2, 1])
+            print "output_shape", output.get_shape()
+
+            # Apply dropout
+            output = tf.nn.dropout(output, self.keep_prob) # (batch_size, doc_size, hidden_size)
 
             return attn_logits, attn_dist, output
 

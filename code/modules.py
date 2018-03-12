@@ -66,8 +66,6 @@ class RNNEncoder(object):
 
             # Note: fw_out and bw_out are the hidden states for every timestep.
             # Each is shape (batch_size, seq_len, hidden_size).
-            print "inputs" , inputs.get_shape()
-            print "input_lens" , input_lens.get_shape()
             (fw_out, bw_out), _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw, self.rnn_cell_bw, inputs, input_lens, dtype=tf.float32)
 
             # Concatenate the forward and backward hidden states
@@ -275,23 +273,18 @@ class SelfAttn(object):
 
             # Calculate attention distribution
             g = tf.tensordot(values, W1, axes=[[2],[0]]) # (batch_size, doc_size, hidden_size)
-            print "g", g.get_shape()
             a = tf.tensordot(V, tf.tanh(g), axes=[[0],[2]]) # shape (batch_size, 1, doc_size)
-            print "a",  a.get_shape()
             attn_logits = tf.tensordot(values_t, a, axes=[[2], [0]]) # shape (batch_size, hidden_size, doc_size)
-            print "attn_logits",  attn_logits.get_shape()
 
 
 
             attn_logits_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, num_values)
             attn_logits, attn_dist = masked_softmax(attn_logits, attn_logits_mask, 2) # shape (batch_size, doc_size, hidden_size). take softmax over values
             attn_logits = tf.transpose(attn_logits, perm=[0, 2, 1])
-            print("attn_shape", attn_logits.get_shape())
             # Use attention distribution to take weighted sum of values
             output = tf.matmul(attn_logits, values_t)
 
             # output = tf.transpose(output, perm=[0, 2, 1])
-            print "output_shape", output.get_shape()
 
             # Apply dropout
             output = tf.nn.dropout(output, self.keep_prob) # (batch_size, doc_size, hidden_size)

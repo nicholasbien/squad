@@ -76,6 +76,50 @@ class RNNEncoder(object):
 
             return out
 
+class CNNCharacterEncoder(object):
+
+    def __init__(self, embed_size, filters, kernal_size, hidden_size, keep_prob):
+        self.embed_size = embed_size
+        self.filters = filters
+        self.kernal_size = kernal_size
+        self.hidden_size = hidden_size
+        self.keep_prop = keep_prob
+        ## ADD CNN STUFF ##
+
+    def build_graph(self, inputs, masks):
+
+        with vs.variable_scope("CNNCharacterEncoder"):
+            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+
+            ## DO CNN STUFF ##
+
+            # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
+
+            # char_embeddings = tf.get_variable(“word_embeddings”, [vocabulary_size, embedding_size])
+            # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
+
+            # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)
+
+            # Run Embed through Conv1D
+
+            # D = 20, k = 5, f = 100
+            # USE KERAS HERE
+            # Convolution
+            # Max Pool
+            # out = Conv1D(self.filters, self.kernal_size)(embed)
+            # out = MaxPooling1D()(out)
+
+
+
+
+
+            out = None
+
+            ## APPLY DROPOUT?? ##
+            out = None
+
+            return out
+
 
 class SimpleSoftmaxLayer(object):
     """

@@ -30,13 +30,13 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn
+from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, CNNCharacterEncoder
 
 logging.basicConfig(level=logging.INFO)
 from model_super import BaselineModel
 
 
-class QAModel(BaselineModel):
+class CharModel(BaselineModel):
     """Top-level Question Answering module"""
 
     def __init__(self, *args, **kwargs):
@@ -51,7 +51,7 @@ class QAModel(BaselineModel):
         """
         print "Initializing the QAModel..."
 
-        super(QAModel, self).__init__( *args, **kwargs)
+        super(CharModel, self).__init__( *args, **kwargs)
 
     def build_graph(self):
         """Builds the main part of the graph for the model, starting from the input embeddings to the final distributions for the answer span.
@@ -70,6 +70,15 @@ class QAModel(BaselineModel):
         encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
+
+        # Char CNN embeddins
+        char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
+        context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
+        question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
+
+        # Concat Word and Char embeddings for hidden emedding to pass to attention:
+        context_hiddens = tf.concat([context_hiddens, context_char_hiddens], 2)
+        question_hiddens = tf.concat([question_hiddens, question_char_hiddens], 2)
 
         # Use context hidden states to attend to question hidden states
         attn_layer = BasicAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)

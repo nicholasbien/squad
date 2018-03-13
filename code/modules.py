@@ -78,11 +78,10 @@ class RNNEncoder(object):
 
 class CNNCharacterEncoder(object):
 
-    def __init__(self, embed_size, filters, kernal_size, hidden_size, keep_prob):
+    def __init__(self, embed_size, filters, kernal_size, keep_prob):
         self.embed_size = embed_size
         self.filters = filters
         self.kernal_size = kernal_size
-        self.hidden_size = hidden_size
         self.keep_prop = keep_prob
         ## ADD CNN STUFF ##
 
@@ -91,11 +90,13 @@ class CNNCharacterEncoder(object):
         with vs.variable_scope("CNNCharacterEncoder"):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
+            print inputs.get_shape()
+
             ## DO CNN STUFF ##
 
             # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
 
-            # char_embeddings = tf.get_variable(“word_embeddings”, [vocabulary_size, embedding_size])
+            # char_embeddings = tf.get_variable("word_embeddings", [vocabulary_size, embedding_size])
             # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
 
             # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)

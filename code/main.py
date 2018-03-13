@@ -32,11 +32,12 @@ from qaoa_model import QAoAModel
 from bidaf_model import BiDAFModel
 from ansptr_model import AnsPtrModel
 from combined_model import CompleteModel
+from char_model import CharModel
 # from test import CompleteModel
 
 # TF_CPP_MIN_LOG_LEVEL=2
 
-models = {"baseline": QAModel, "AoA": QAoAModel, "BiDAF":BiDAFModel, "AnsPtr": AnsPtrModel, "complete":CompleteModel}
+models = {"baseline": QAModel, "AoA": QAoAModel, "BiDAF":BiDAFModel, "AnsPtr": AnsPtrModel, "complete":CompleteModel, "char":CharModel}
 
 
 
@@ -62,6 +63,7 @@ tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
 tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 300, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
+tf.app.flags.DEFINE_integer("max_word_len", 20, "The maximum word length of your model (for character embeddings)")
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 
 # How often to print, save, eval

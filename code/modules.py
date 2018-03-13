@@ -19,6 +19,8 @@ from tensorflow.python.ops.rnn_cell import DropoutWrapper
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import rnn_cell
 
+from keras.layers import Conv2D, Embedding, Reshape
+
 
 class RNNEncoder(object):
     """
@@ -82,42 +84,24 @@ class CNNCharacterEncoder(object):
         self.embed_size = embed_size
         self.filters = filters
         self.kernal_size = kernal_size
-        self.keep_prop = keep_prob
+        self.keep_prob = keep_prob
+        self.vocab_size = 176 # 174 + pad + unknown
         ## ADD CNN STUFF ##
 
     def build_graph(self, inputs, masks):
 
-        with vs.variable_scope("CNNCharacterEncoder"):
+        with vs.variable_scope("CNNCharacterEncoder", reuse=tf.AUTO_REUSE):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
-            print inputs.get_shape()
+            char_embeddings = tf.get_variable("char_embeddings", [self.vocab_size, self.embed_size])
+            embed = tf.nn.embedding_lookup(char_embeddings, inputs)
 
-            ## DO CNN STUFF ##
+            X = Conv2D(self.filters, self.kernal_size, padding='same')(embed)
 
-            # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
-
-            # char_embeddings = tf.get_variable("word_embeddings", [vocabulary_size, embedding_size])
-            # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
-
-            # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)
-
-            # Run Embed through Conv1D
-
-            # D = 20, k = 5, f = 100
-            # USE KERAS HERE
-            # Convolution
-            # Max Pool
-            # out = Conv1D(self.filters, self.kernal_size)(embed)
-            # out = MaxPooling1D()(out)
-
-
-
-
-
-            out = None
+            X = tf.reduce_max(X, axis=2)
 
             ## APPLY DROPOUT?? ##
-            out = None
+            out = tf.nn.dropout(X, self.keep_prob)
 
             return out
 

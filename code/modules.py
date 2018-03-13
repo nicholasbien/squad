@@ -91,7 +91,6 @@ class CNNCharacterEncoder(object):
     def build_graph(self, inputs, masks):
 
         with vs.variable_scope("CNNCharacterEncoder", reuse=tf.AUTO_REUSE):
-            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
 
             char_embeddings = tf.get_variable("char_embeddings", [self.vocab_size, self.embed_size])
             embed = tf.nn.embedding_lookup(char_embeddings, inputs)

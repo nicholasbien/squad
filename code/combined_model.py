@@ -30,7 +30,7 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn
+from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn, BiDAFOut
 from model_super import BaselineModel
 
 logging.basicConfig(level=logging.INFO)
@@ -119,12 +119,15 @@ class CompleteModel(BaselineModel):
         # encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
         # bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="SelfAttnBidaf") # (batch_size, question_len, hidden_size*2)
         
-        final_context_reps = tf.contrib.layers.fully_connected(bidaf_second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
+        # final_context_reps = tf.contrib.layers.fully_connected(bidaf_second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
 
         ####################
         # Attn_Layer
-        ansptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
-        self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = ansptr_layer.build_graph(final_context_reps, self.context_mask)
+        # ansptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
+
+        # BiDAF Output Layer
+        bidaf_out = BiDAFOut(self.FLAGS.hidden_size, self.keep_prob)
+        self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, bidaf_second_layer_hiddens, self.context_mask)
 
 
 

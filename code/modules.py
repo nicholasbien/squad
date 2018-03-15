@@ -19,7 +19,7 @@ from tensorflow.python.ops.rnn_cell import DropoutWrapper
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import rnn_cell
 
-from keras.layers import Conv2D, Embedding, Reshape
+from keras.layers import Conv1D, MaxPooling1D, Activation
 
 
 class RNNEncoder(object):
@@ -95,12 +95,16 @@ class CNNCharacterEncoder(object):
             char_embeddings = tf.get_variable("char_embeddings", [self.vocab_size, self.embed_size])
             embed = tf.nn.embedding_lookup(char_embeddings, inputs)
 
-            X = Conv2D(self.filters, self.kernal_size, padding='same')(embed)
+            X = tf.reshape(embed, [-1, embed.get_shape()[2], embed.get_shape()[3]])
+
+            X = Conv1D(self.filters, self.kernal_size, padding='same', activation=Activation('tanh'))(X)
 
             X = tf.reduce_max(X, axis=2)
 
+            out = tf.reshape(X, [-1, embed.get_shape()[1], embed.get_shape()[2]])
+
             ## APPLY DROPOUT?? ##
-            out = tf.nn.dropout(X, self.keep_prob)
+            out = tf.nn.dropout(out, self.keep_prob)
 
             return out
 
@@ -141,6 +145,29 @@ class SimpleSoftmaxLayer(object):
             masked_logits, prob_dist = masked_softmax(logits, masks, 1)
 
             return masked_logits, prob_dist
+
+class BiDAFOut(object):
+
+    def __init__(self, hidden_size, keep_prob):
+        self.hidden_size = hidden_size
+        self.keep_prob = keep_prob
+
+    def build_graph(self, G, M, masks):
+
+        with vs.variable_scope("BiDAFOut"):
+
+            # Take G (attention output) and M (modeling output) as input
+
+            # first, softmax with weights:
+            # create wp1
+            # p1 = softmax(wp1 . [G;M])
+
+            # create M2 with a BiLSTM
+
+            # create wp2
+            # p2 = softmax(wp2 . [G;M2])
+            pass
+
 
 class AnsPtr(object):
 

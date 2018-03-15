@@ -30,7 +30,7 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, CNNCharacterEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn
+from modules import RNNEncoder, CNNCharacterEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn, BiDAFOut
 from model_super import BaselineModel
 
 logging.basicConfig(level=logging.INFO)

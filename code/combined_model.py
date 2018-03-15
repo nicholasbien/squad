@@ -81,6 +81,15 @@ class CompleteModel(BaselineModel):
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
+        # Char CNN embeddins
+        char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
+        context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
+        question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
+
+        # Concat Word and Char embeddings for hidden emedding to pass to attention:
+        context_hiddens = tf.concat([context_hiddens, context_char_hiddens], 2)
+        question_hiddens = tf.concat([question_hiddens, question_char_hiddens], 2)
+
         ####################
         # Bidaf Attn Layer
         ####################

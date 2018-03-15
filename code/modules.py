@@ -78,45 +78,31 @@ class RNNEncoder(object):
 
 class CNNCharacterEncoder(object):
 
-    def __init__(self, embed_size, filters, kernal_size, hidden_size, keep_prob):
+    def __init__(self, embed_size, filters, kernal_size, keep_prob):
         self.embed_size = embed_size
         self.filters = filters
         self.kernal_size = kernal_size
-        self.hidden_size = hidden_size
-        self.keep_prop = keep_prob
+        self.keep_prob = keep_prob
+        self.vocab_size = 176 # 174 + pad + unknown
         ## ADD CNN STUFF ##
 
     def build_graph(self, inputs, masks):
 
-        with vs.variable_scope("CNNCharacterEncoder"):
-            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+        with vs.variable_scope("CNNCharacterEncoder", reuse=tf.AUTO_REUSE):
 
-            ## DO CNN STUFF ##
+            char_embeddings = tf.get_variable("char_embeddings", [self.vocab_size, self.embed_size])
+            embed = tf.nn.embedding_lookup(char_embeddings, inputs)
 
-            # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
+            X = tf.reshape(embed, [-1, embed.get_shape()[2], embed.get_shape()[3]])
 
-            # char_embeddings = tf.get_variable(“word_embeddings”, [vocabulary_size, embedding_size])
-            # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
+            X = Conv1D(self.filters, self.kernal_size, padding='same', activation=Activation('tanh'))(X)
 
-            # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)
+            X = tf.reduce_max(X, axis=2)
 
-            # Run Embed through Conv1D
-
-            # D = 20, k = 5, f = 100
-            # USE KERAS HERE
-            # Convolution
-            # Max Pool
-            # out = Conv1D(self.filters, self.kernal_size)(embed)
-            # out = MaxPooling1D()(out)
-
-
-
-
-
-            out = None
+            out = tf.reshape(X, [-1, embed.get_shape()[1], embed.get_shape()[2]])
 
             ## APPLY DROPOUT?? ##
-            out = None
+            out = tf.nn.dropout(out, self.keep_prob)
 
             return out
 

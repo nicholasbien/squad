@@ -30,17 +30,14 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn, BiDAFOut
-from model_super import BaselineModel
+from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, CNNCharacterEncoder
 
 logging.basicConfig(level=logging.INFO)
+from model_super import BaselineModel
 
 
-
-class CompleteModel(BaselineModel):
-    """Top-level Question Answering module
-        Uses Bidaf, Self attention, and end pointers based on the start pointer
-    """
+class CharModel(BaselineModel):
+    """Top-level Question Answering module"""
 
     def __init__(self, *args, **kwargs):
         """
@@ -52,11 +49,9 @@ class CompleteModel(BaselineModel):
           word2id: dictionary mapping word (string) to word idx (int)
           emb_matrix: numpy array shape (400002, embedding_size) containing pre-traing GloVe embeddings
         """
-        print "Initializing the Combined Model..."
+        print "Initializing the QAModel..."
 
-        super(CompleteModel, self).__init__( *args, **kwargs)
-
-
+        super(CharModel, self).__init__( *args, **kwargs)
 
     def build_graph(self):
         """Builds the main part of the graph for the model, starting from the input embeddings to the final distributions for the answer span.
@@ -72,62 +67,42 @@ class CompleteModel(BaselineModel):
         # Use a RNN to get hidden states for the context and the question
         # Note: here the RNNEncoder is shared (i.e. the weights are the same)
         # between the context and the question.
-
-        ########################################
-        # First bidirection GRU layer
-        ########################################
-
         encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
         context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
-        ####################
-        # Bidaf Attn Layer
-        ####################
+        # Char CNN embeddins
+        char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
+        context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
+        question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
+
+        # Concat Word and Char embeddings for hidden emedding to pass to attention:
+        context_hiddens = tf.concat([context_hiddens, context_char_hiddens], 2)
+        question_hiddens = tf.concat([question_hiddens, question_char_hiddens], 2)
 
         # Use context hidden states to attend to question hidden states
-        attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
-        _, attn_output = attn_layer.build_graph(context_hiddens, question_hiddens, self.context_mask, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*2)
-        # Concat attn_output to contexxt_hiddens to get blended_reps
+        attn_layer = BasicAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
+        _, _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
+
+        # Concat attn_output to context_hiddens to get blended_reps
         blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*4)
 
-        ####################
-        # Bidaf second bidirection layer
-        ####################
+        # Apply fully connected layer to each blended representation
+        # Note, blended_reps_final corresponds to b' in the handout
+        # Note, tf.contrib.layers.fully_connected applies a ReLU non-linarity here by default
+        blended_reps_final = tf.contrib.layers.fully_connected(blended_reps, num_outputs=self.FLAGS.hidden_size) # blended_reps_final is shape (batch_size, context_len, hidden_size)
 
-        # Bidaf layer after context and question attnetion is calculated. Based off oringinal BiDaf paper
+        # Use softmax layer to compute probability distribution for start location
+        # Note this produces self.logits_start and self.probdist_start, both of which have shape (batch_size, context_len)
+        with vs.variable_scope("StartDist"):
+            softmax_layer_start = SimpleSoftmaxLayer()
+            self.logits_start, self.probdist_start = softmax_layer_start.build_graph(blended_reps_final, self.context_mask)
 
-        encoder2 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        bidaf_second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder") # (batch_size, question_len, hidden_size*2)
-
-        ####################
-        # Self Attn Layer
-        ####################
-
-        # if self.self_attn:
-        # # Bidaf second attention layer, should eventually use self attention
-        #     self_attn_layer = SelfAttn(self.keep_prob, self.FLAGS.hidden_size*2)
-        #     _, self_attn_output = self_attn_layer.build_graph(bidaf_second_layer_hiddens, self.context_mask) 
-        #     self_attn_reps = tf.concat([bidaf_second_layer_hiddens, self_attn_output], axis=2) 
-        # else: 
-        #     self_attn_reps = bidaf_second_layer_hiddens
-
-        ####################
-        # Bidaf third bidirection layer
-        ####################
-
-        encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="SelfAttnBidaf") # (batch_size, question_len, hidden_size*2)
-        
-        final_context_reps = tf.contrib.layers.fully_connected(bidaf_third_layer, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
-
-        ####################
-        # Attn_Layer
-        # ansptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
-
-        # BiDAF Output Layer
-        bidaf_out = BiDAFOut(self.FLAGS.hidden_size, self.keep_prob)
-        self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, bidaf_second_layer_hiddens, self.context_mask)
+        # Use softmax layer to compute probability distribution for end location
+        # Note this produces self.logits_end and self.probdist_end, both of which have shape (batch_size, context_len)
+        with vs.variable_scope("EndDist"):
+            softmax_layer_end = SimpleSoftmaxLayer()
+            self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
 
 
 

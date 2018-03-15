@@ -32,6 +32,7 @@ from qaoa_model import QAoAModel
 from bidaf_model import BiDAFModel
 from ansptr_model import AnsPtrModel
 from combined_model import CompleteModel
+import shutil
 # from test import CompleteModel
 
 # TF_CPP_MIN_LOG_LEVEL=2
@@ -55,11 +56,11 @@ tf.app.flags.DEFINE_string("model_name", "baseline", "Name of the model for your
 tf.app.flags.DEFINE_integer("num_epochs", 50, "Number of epochs to train. 0 means train indefinitely")
 
 # Hyperparameters
-tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
+tf.app.flags.DEFINE_float("learning_rate", 0.005, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 2.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
-tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
+tf.app.flags.DEFINE_integer("hidden_size", 100, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 300, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
@@ -67,7 +68,7 @@ tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word 
 # How often to print, save, eval
 tf.app.flags.DEFINE_integer("print_every", 10, "How many iterations to do per print.")
 tf.app.flags.DEFINE_integer("save_every", 100, "How many iterations to do per save.")
-tf.app.flags.DEFINE_integer("eval_every", 2000, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
+tf.app.flags.DEFINE_integer("eval_every", 500, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
 tf.app.flags.DEFINE_integer("keep", 1, "How many checkpoints to keep. 0 indicates keep all (you shouldn't need to do keep all though - it's very storage intensive).")
 
 # Reading and saving data
@@ -77,6 +78,7 @@ tf.app.flags.DEFINE_string("data_dir", DEFAULT_DATA_DIR, "Where to find preproce
 tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which directory to load the checkpoint fron. You need to specify this for official_eval mode.")
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
 tf.app.flags.DEFINE_string("json_out_path", "predictions.json", "Output path for official_eval mode. Defaults to predictions.json")
+tf.app.flags.DEFINE_boolean("overwrite", False, "Output path for official_eval mode. Defaults to predictions.json")
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -136,7 +138,7 @@ def main(unused_argv):
     emb_matrix, word2id, id2word = get_glove(FLAGS.glove_path, FLAGS.embedding_size)
     if FLAGS.model_name not in models:
         raise Exception("A model with that name was not found")
-
+    tf.set_random_seed(42)
     current_model = models[FLAGS.model_name]
     # Get filepaths to train/dev datafiles for tokenized queries, contexts and answers
     train_context_path = os.path.join(FLAGS.data_dir, "train.context")
@@ -155,6 +157,8 @@ def main(unused_argv):
 
     # Split by mode
     if FLAGS.mode == "train":
+        if  os.path.exists(FLAGS.train_dir) and FLAGS.overwrite:
+            shutil.rmtree(FLAGS.train_dir)
 
         # Setup train dir and logfile
         if not os.path.exists(FLAGS.train_dir):

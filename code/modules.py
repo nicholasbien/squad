@@ -95,7 +95,7 @@ class CNNCharacterEncoder(object):
 
             # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
 
-            # char_embeddings = tf.get_variable(“word_embeddings”, [vocabulary_size, embedding_size])
+            # char_embeddings = tf.get_variable("word_embeddings", [vocabulary_size, embedding_size])
             # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
 
             # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)

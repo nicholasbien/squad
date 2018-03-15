@@ -116,10 +116,10 @@ class CompleteModel(BaselineModel):
         # Bidaf third bidirection layer
         ####################
 
-        # encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        # bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="SelfAttnBidaf") # (batch_size, question_len, hidden_size*2)
+        encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+        bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="SelfAttnBidaf") # (batch_size, question_len, hidden_size*2)
         
-        final_context_reps = tf.contrib.layers.fully_connected(bidaf_second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
+        final_context_reps = tf.contrib.layers.fully_connected(bidaf_third_layer, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
 
         ####################
         # Attn_Layer

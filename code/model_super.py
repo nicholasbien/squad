@@ -256,7 +256,10 @@ class BaselineModel(object):
         Determine start and end prediction by finding the indicies k <= l
         that maximizes p1k*p2l
         """
-        pass
+        
+
+        start_pos, end_pos = 0, 0
+        return start_pos, end_pos
 
     def get_start_end_pos(self, session, batch):
         """

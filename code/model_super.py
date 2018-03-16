@@ -252,14 +252,28 @@ class BaselineModel(object):
 
 
     def DP_pred(self, start_dist, end_dist):
-        """
-        Determine start and end prediction by finding the indicies k <= l
-        that maximizes p1k*p2l
-        """
-        
+        max_answer_len = self.FLAGS.max_ans_len
 
-        start_pos, end_pos = 0, 0
-        return start_pos, end_pos
+        overall_max_prod = float('-inf')
+        start = []
+        end = []
+
+        for batch in range(len(start_dist)):
+            start_pos = -1
+            end_pos = -1
+            for i in range(len(start_dist[batch])):
+                max_end_index = i + np.argmax(end_dist[batch,i:i+max_answer_len])
+                max_prod = start_dist[batch,i] * end_dist[batch,max_end_index]
+                if max_prod > overall_max_prod:
+                    start_pos = i
+                    end_pos = max_end_index
+                    overall_max_prod = max_prod
+            start.append(start_pos)
+            end.append(end_pos)
+
+        return np.array(start), np.array(end)
+
+
 
     def get_start_end_pos(self, session, batch):
         """
@@ -284,14 +298,11 @@ class BaselineModel(object):
             for i, pos in enumerate(start_pos):
                 mask[i][:pos] = 0
 
-            print 'Start Pos: ', start_pos
-            print 'Mask: ', mask
-
             end_dist = mask * end_dist
 
             end_pos = np.argmax(end_dist, axis=1)
         else:
-            start_pos, end_pos = DP_pred(start_dist, end_dist)
+            start_pos, end_pos = self.DP_pred(start_dist, end_dist)
 
         ####### ADD DP HERE TO FIND MAX p1k*p2l where k <= l
 

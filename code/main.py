@@ -61,9 +61,10 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 2.0, "Clip gradients to this norm
 tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
 tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
-tf.app.flags.DEFINE_integer("context_len", 300, "The maximum context length of your model")
+tf.app.flags.DEFINE_integer("context_len", 400, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
 tf.app.flags.DEFINE_integer("max_word_len", 20, "The maximum word length of your model (for character embeddings)")
+tf.app.flags.DEFINE_integer("max_ans_len", 20, "Maximum span for any answer prediction")
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 
 # How often to print, save, eval
@@ -79,6 +80,18 @@ tf.app.flags.DEFINE_string("data_dir", DEFAULT_DATA_DIR, "Where to find preproce
 tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which directory to load the checkpoint fron. You need to specify this for official_eval mode.")
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
 tf.app.flags.DEFINE_string("json_out_path", "predictions.json", "Output path for official_eval mode. Defaults to predictions.json")
+
+# Flag for overwriting previous experiments
+tf.app.flags.DEFINE_boolean("overwrite", False, "Determines whether or not to overwrite a previous experiment of the same name.")
+
+# Flag for using Character Embeddings
+tf.app.flags.DEFINE_boolean("char_embed", False, "Determines whether or not we use character embeddings")
+
+# Flag for using BiDAF DP prediction
+tf.add.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
+
+# Flag for which output layer to use
+tf.add.flags.DEFINE_string("output", "ans_ptr", "Determines which output to use")
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -157,6 +170,8 @@ def main(unused_argv):
 
     # Split by mode
     if FLAGS.mode == "train":
+        if  os.path.exists(FLAGS.train_dir) and FLAGS.overwrite:
+            shutil.rmtree(FLAGS.train_dir)
 
         # Setup train dir and logfile
         if not os.path.exists(FLAGS.train_dir):

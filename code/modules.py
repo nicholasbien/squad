@@ -19,6 +19,8 @@ from tensorflow.python.ops.rnn_cell import DropoutWrapper
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import rnn_cell
 
+from keras.layers import Conv1D, MaxPooling1D, Activation
+
 
 class RNNEncoder(object):
     """
@@ -82,42 +84,27 @@ class CNNCharacterEncoder(object):
         self.embed_size = embed_size
         self.filters = filters
         self.kernal_size = kernal_size
-        self.keep_prop = keep_prob
+        self.keep_prob = keep_prob
+        self.vocab_size = 176 # 174 + pad + unknown
         ## ADD CNN STUFF ##
 
     def build_graph(self, inputs, masks):
 
-        with vs.variable_scope("CNNCharacterEncoder"):
-            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+        with vs.variable_scope("CNNCharacterEncoder", reuse=tf.AUTO_REUSE):
 
-            print inputs.get_shape()
+            char_embeddings = tf.get_variable("char_embeddings", [self.vocab_size, self.embed_size])
+            embed = tf.nn.embedding_lookup(char_embeddings, inputs)
 
-            ## DO CNN STUFF ##
+            X = tf.reshape(embed, [-1, embed.get_shape()[2], embed.get_shape()[3]])
 
-            # THE INPUT MUST BE THE CHARACTER IDS FOR THE DOCUMENT
+            X = Conv1D(self.filters, self.kernal_size, padding='same', activation=Activation('tanh'))(X)
 
-            # char_embeddings = tf.get_variable("word_embeddings", [vocabulary_size, embedding_size])
-            # embed = tf.nn.embedding_lookup(word_embeddings, word_ids)
+            X = tf.reduce_max(X, axis=2)
 
-            # EMBED SHOULD BE SHAPE (batch_size, context_len, d=20)
-
-            # Run Embed through Conv1D
-
-            # D = 20, k = 5, f = 100
-            # USE KERAS HERE
-            # Convolution
-            # Max Pool
-            # out = Conv1D(self.filters, self.kernal_size)(embed)
-            # out = MaxPooling1D()(out)
-
-
-
-
-
-            out = None
+            out = tf.reshape(X, [-1, embed.get_shape()[1], embed.get_shape()[2]])
 
             ## APPLY DROPOUT?? ##
-            out = None
+            out = tf.nn.dropout(out, self.keep_prob)
 
             return out
 
@@ -158,6 +145,36 @@ class SimpleSoftmaxLayer(object):
             masked_logits, prob_dist = masked_softmax(logits, masks, 1)
 
             return masked_logits, prob_dist
+
+class BiDAFOut(object):
+
+    def __init__(self, hidden_size, keep_prob):
+        self.hidden_size = hidden_size
+        self.keep_prob = keep_prob
+        # self.rnn_cell = rnn_cell.GRUCell(self.hidden_size)
+        # self.rnn_cell = DropoutWrapper(self.rnn_cell, input_keep_prob=self.keep_prob)
+
+    def build_graph(self, G, M, masks):
+
+        with vs.variable_scope("BiDAFOut"):
+            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+
+            # G: attention output (batch_size, input_len, hidden_size*8)
+            # M: modeling output (batch_size, input_len, hidden_size*2)
+
+            w1 = tf.get_variable("w1", shape=(self.hidden_size*10), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_mult1 = tf.tensordot(tf.concat([G,M], axis=2), w1, axes=[[2],[0]])
+            start_logits, start_dist = masked_softmax(weighted_mult1, masks, 2)
+
+            # M2, _ = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32)
+            M2 = RNNEncoder(self.hidden_size, self.keep_prob).build_graph(M, masks, scope_name="M2")
+
+            w2 = tf.get_variable("w2", shape=(self.hidden_size*10), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_mult2 = tf.tensordot(tf.concat([G,M2], axis=2), w2, axes=[[2],[0]])
+            end_logits, end_dist = masked_softmax(weighted_mult2, masks, 2)
+
+            return start_logits, start_dist, end_logits, end_dist
+
 
 class AnsPtr(object):
 

@@ -251,6 +251,16 @@ class BaselineModel(object):
         return probdist_start, probdist_end
 
 
+    def DP_pred(self, start_dist, end_dist):
+        """
+        Determine start and end prediction by finding the indicies k <= l
+        that maximizes p1k*p2l
+        """
+        
+
+        start_pos, end_pos = 0, 0
+        return start_pos, end_pos
+
     def get_start_end_pos(self, session, batch):
         """
         Run forward-pass only; get the most likely answer span.
@@ -267,8 +277,13 @@ class BaselineModel(object):
         start_dist, end_dist = self.get_prob_dists(session, batch)
 
         # Take argmax to get start_pos and end_post, both shape (batch_size)
-        start_pos = np.argmax(start_dist, axis=1)
-        end_pos = np.argmax(end_dist, axis=1)
+        if not self.FLAGS.dp_pred:
+            start_pos = np.argmax(start_dist, axis=1)
+            end_pos = np.argmax(end_dist, axis=1)
+        else:
+            start_pos, end_pos = DP_pred(start_dist, end_dist)
+
+        ####### ADD DP HERE TO FIND MAX p1k*p2l where k <= l
 
         return start_pos, end_pos
 

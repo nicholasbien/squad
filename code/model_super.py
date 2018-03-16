@@ -279,6 +279,9 @@ class BaselineModel(object):
         # Take argmax to get start_pos and end_post, both shape (batch_size)
         if not self.FLAGS.dp_pred:
             start_pos = np.argmax(start_dist, axis=1)
+
+            ##### MASK END_DIST USING START_POS HERE #####
+
             end_pos = np.argmax(end_dist, axis=1)
         else:
             start_pos, end_pos = DP_pred(start_dist, end_dist)

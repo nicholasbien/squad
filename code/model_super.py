@@ -280,7 +280,14 @@ class BaselineModel(object):
         if not self.FLAGS.dp_pred:
             start_pos = np.argmax(start_dist, axis=1)
 
-            ##### MASK END_DIST USING START_POS HERE #####
+            mask = np.ones(end_dist.shape)
+            for i, pos in enumerate(start_pos):
+                mask[i][:pos] = 0
+
+            print 'Start Pos: ', start_pos
+            print 'Mask: ', mask
+
+            end_dist = mask * end_dist
 
             end_pos = np.argmax(end_dist, axis=1)
         else:

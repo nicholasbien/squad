@@ -77,25 +77,25 @@ class CompleteModel(BaselineModel):
         # First bidirection GRU layer
         ########################################
 
-        encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        context_hiddens = encoder.build_graph(self.context_embs, self.context_mask) # (batch_size, context_len, hidden_size*2)
-        question_hiddens = encoder.build_graph(self.qn_embs, self.qn_mask) # (batch_size, question_len, hidden_size*2)
-
         # Char CNN embeddins
         char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
         context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
         question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
 
-        # Concat Word and Char embeddings for hidden emedding to pass to attention:
-        context_hiddens = tf.concat([context_hiddens, context_char_hiddens], 2)
-        question_hiddens = tf.concat([question_hiddens, question_char_hiddens], 2)
+        ############################
+        # Contextual Embedding Layer
+        ############################
+
+        encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+        context_hiddens = encoder.build_graph(tf.concat([self.context_embs, context_char_hiddens], 2), self.context_mask) # (batch_size, context_len, hidden_size*2)
+        question_hiddens = encoder.build_graph(tf.concat([self.qn_embs, question_char_hiddens], 2), self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
         ####################
         # Bidaf Attn Layer
         ####################
 
         # Use context hidden states to attend to question hidden states
-        attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2+20, self.FLAGS.hidden_size*2+20)
+        attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
         _, attn_output = attn_layer.build_graph(context_hiddens, question_hiddens, self.context_mask, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*2)
         # Concat attn_output to contexxt_hiddens to get blended_reps
         blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*4)
@@ -107,7 +107,7 @@ class CompleteModel(BaselineModel):
         # Bidaf layer after context and question attnetion is calculated. Based off oringinal BiDaf paper
 
         encoder2 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        bidaf_second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder") # (batch_size, question_len, hidden_size*2)
+        bidaf_second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder1") # (batch_size, question_len, hidden_size*2)
 
         ####################
         # Self Attn Layer
@@ -126,7 +126,7 @@ class CompleteModel(BaselineModel):
         ####################
 
         encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="SelfAttnBidaf") # (batch_size, question_len, hidden_size*2)
+        bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="BidafEncoder2") # (batch_size, question_len, hidden_size*2)
         
         # final_context_reps = tf.contrib.layers.fully_connected(bidaf_second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
 
@@ -135,7 +135,10 @@ class CompleteModel(BaselineModel):
         # ansptr_layer = AnsPtr(self.FLAGS.hidden_size, self.keep_prob)
         # self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = ansptr_layer.build_graph(final_context_reps, self.context_mask)
 
+        ####################
         # BiDAF Output Layer
+        ####################
+        
         bidaf_out = BiDAFOut(self.FLAGS.hidden_size, self.keep_prob)
         self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, bidaf_third_layer, self.context_mask)
 

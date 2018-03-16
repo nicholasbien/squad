@@ -97,7 +97,8 @@ class CNNCharacterEncoder(object):
 
             X = tf.reshape(embed, [-1, embed.get_shape()[2], embed.get_shape()[3]])
 
-            X = Conv1D(self.filters, self.kernal_size, padding='same', activation=Activation('tanh'))(X)
+            X = Conv1D(self.filters, self.kernal_size, padding='same', activation=None)(X)
+            X = Activation('tanh')(X)
 
             X = tf.reduce_max(X, axis=2)
 

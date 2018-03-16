@@ -88,10 +88,10 @@ tf.app.flags.DEFINE_boolean("overwrite", False, "Determines whether or not to ov
 tf.app.flags.DEFINE_boolean("char_embed", False, "Determines whether or not we use character embeddings")
 
 # Flag for using BiDAF DP prediction
-tf.add.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
+tf.app.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
 
 # Flag for which output layer to use
-tf.add.flags.DEFINE_string("output", "ans_ptr", "Determines which output to use")
+tf.app.flags.DEFINE_string("output", "ans_ptr", "Determines which output to use")
 
 
 FLAGS = tf.app.flags.FLAGS

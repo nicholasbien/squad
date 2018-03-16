@@ -80,6 +80,9 @@ tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which d
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
 tf.app.flags.DEFINE_string("json_out_path", "predictions.json", "Output path for official_eval mode. Defaults to predictions.json")
 
+# Flat for overwriting previous experiments
+tf.app.flags.DEFINE_boolean("overwrite", False, "Output path for official_eval mode. Defaults to predictions.json")
+
 # Flag for using BiDAF DP prediction
 tf.add.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
 
@@ -160,6 +163,8 @@ def main(unused_argv):
 
     # Split by mode
     if FLAGS.mode == "train":
+        if  os.path.exists(FLAGS.train_dir) and FLAGS.overwrite:
+            shutil.rmtree(FLAGS.train_dir)
 
         # Setup train dir and logfile
         if not os.path.exists(FLAGS.train_dir):

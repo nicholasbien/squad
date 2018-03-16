@@ -73,9 +73,9 @@ class CompleteModel(BaselineModel):
         # Note: here the RNNEncoder is shared (i.e. the weights are the same)
         # between the context and the question.
 
-        ########################################
-        # First bidirection GRU layer
-        ########################################
+        ###########################
+        # Character Embedding Layer
+        ###########################
 
         # Char CNN embeddins
         char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
@@ -138,7 +138,7 @@ class CompleteModel(BaselineModel):
         ####################
         # BiDAF Output Layer
         ####################
-        
+
         bidaf_out = BiDAFOut(self.FLAGS.hidden_size, self.keep_prob)
         self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, bidaf_third_layer, self.context_mask)
 

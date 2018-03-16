@@ -162,14 +162,14 @@ class BiDAFOut(object):
             # G: attention output (batch_size, input_len, hidden_size*8)
             # M: modeling output (batch_size, input_len, hidden_size*2)
 
-            w1 = tf.get_variable("w1", shape=(self.hidden_size*10+80), initializer=tf.contrib.layers.xavier_initializer())
+            w1 = tf.get_variable("w1", shape=(self.hidden_size*10), initializer=tf.contrib.layers.xavier_initializer())
             weighted_mult1 = tf.tensordot(tf.concat([G,M], axis=2), w1, axes=[[2],[0]])
             start_logits, start_dist = masked_softmax(weighted_mult1, masks, 2)
 
             # M2, _ = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32)
             M2 = RNNEncoder(self.hidden_size, self.keep_prob).build_graph(M, masks, scope_name="M2")
 
-            w2 = tf.get_variable("w2", shape=(self.hidden_size*10+80), initializer=tf.contrib.layers.xavier_initializer())
+            w2 = tf.get_variable("w2", shape=(self.hidden_size*10), initializer=tf.contrib.layers.xavier_initializer())
             weighted_mult2 = tf.tensordot(tf.concat([G,M2], axis=2), w2, axes=[[2],[0]])
             end_logits, end_dist = masked_softmax(weighted_mult2, masks, 2)
 

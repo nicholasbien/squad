@@ -73,22 +73,31 @@ class CompleteModel(BaselineModel):
         # Note: here the RNNEncoder is shared (i.e. the weights are the same)
         # between the context and the question.
 
-        ###########################
-        # Character Embedding Layer
-        ###########################
+        context_input = self.context_embs
+        question_input = self.qn_embs
 
-        # Char CNN embeddins
-        char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
-        context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
-        question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
+        if self.FLAGS.char_embed:
+
+            ###########################
+            # Character Embedding Layer
+            ###########################
+
+            # Char CNN embeddins
+            char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
+            context_char_hiddens = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
+            question_char_hiddens = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
+
+            # Concat to word embeddings
+            context_input = tf.concat([self.context_embs, context_char_hiddens], 2)
+            question_input = tf.concat([self.qn_embs, question_char_hiddens], 2)
 
         ############################
         # Contextual Embedding Layer
         ############################
 
         encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        context_hiddens = encoder.build_graph(tf.concat([self.context_embs, context_char_hiddens], 2), self.context_mask) # (batch_size, context_len, hidden_size*2)
-        question_hiddens = encoder.build_graph(tf.concat([self.qn_embs, question_char_hiddens], 2), self.qn_mask) # (batch_size, question_len, hidden_size*2)
+        context_hiddens = encoder.build_graph(context_input, self.context_mask) # (batch_size, context_len, hidden_size*2)
+        question_hiddens = encoder.build_graph(question_input, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
         ####################
         # Bidaf Attn Layer

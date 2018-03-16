@@ -101,9 +101,9 @@ def sentence_to_token_ids(sentence, word2id):
 
 def sentence_to_char_ids(sentence, char2id, max_word_len):
     tokens = split_by_whitespace(sentence) # list of strings
-    chars, ids = zip(*[ (list(token), [char2id.get(c, CHAR_UNK_ID) for c in token]) for token in tokens ])
-    ids = [x if len(x) <= max_word_len else x[:max_word_len] for x in ids] # truncate to max_word_len
-    return chars, ids
+    ids = [ [char2id.get(c, CHAR_UNK_ID) for c in token[:min(max_word_len, len(token))]] for token in tokens ]
+    # ids = [x if len(x) <= max_word_len else x[:max_word_len] for x in ids] # truncate to max_word_len
+    return ids
 
 def padded(token_batch, batch_pad=0):
     """
@@ -150,8 +150,8 @@ def refill_batches(batches, word2id, char2id, context_file, qn_file, ans_file, b
         ans_span = intstr_to_intlist(ans_line)
 
         # Convert to char ids
-        context_chars, context_char_ids = sentence_to_char_ids(context_line, char2id, max_word_len)
-        qn_chars, qn_char_ids = sentence_to_char_ids(qn_line, char2id, max_word_len)
+        context_char_ids = sentence_to_char_ids(context_line, char2id, max_word_len)
+        qn_char_ids = sentence_to_char_ids(qn_line, char2id, max_word_len)
 
         # read the next line from each file
         context_line, qn_line, ans_line = context_file.readline(), qn_file.readline(), ans_file.readline()

@@ -254,11 +254,11 @@ class BaselineModel(object):
     def DP_pred(self, start_dist, end_dist):
         max_answer_len = self.FLAGS.max_ans_len
 
-        overall_max_prod = float('-inf')
         start = []
         end = []
 
         for batch in range(len(start_dist)):
+            overall_max_prod = float('-inf')
             start_pos = -1
             end_pos = -1
             for i in range(len(start_dist[batch])):

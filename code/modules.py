@@ -230,7 +230,7 @@ class BiDAFOut(object):
         # self.rnn_cell = rnn_cell.GRUCell(self.hidden_size)
         # self.rnn_cell = DropoutWrapper(self.rnn_cell, input_keep_prob=self.keep_prob)
 
-    def build_graph(self, G, M, masks):
+    def build_graph(self, G, M, M2, masks):
 
         with vs.variable_scope("BiDAFOut"):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
@@ -243,7 +243,7 @@ class BiDAFOut(object):
             start_logits, start_dist = masked_softmax(weighted_mult1, masks, 2)
 
             # M2, _ = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32)
-            M2 = RNNEncoder(self.hidden_size, self.keep_prob).build_graph(M, masks, scope_name="M2")
+            # M2 = RNNEncoder(self.hidden_size, self.keep_prob).build_graph(M, masks, scope_name="M2")
 
             w2 = tf.get_variable("w2", shape=(self.hidden_size*10), initializer=tf.contrib.layers.xavier_initializer())
             weighted_mult2 = tf.tensordot(tf.concat([G,M2], axis=2), w2, axes=[[2],[0]])

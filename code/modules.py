@@ -68,7 +68,7 @@ class RNNEncoder(object):
 
             # Note: fw_out and bw_out are the hidden states for every timestep.
             # Each is shape (batch_size, seq_len, hidden_size).
-            (fw_out, bw_out), _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw, self.rnn_cell_bw, inputs, input_lens, dtype=tf.float32)
+            (fw_out, bw_out), _ = tf.nn.bidirectional_dynamic_rnn(self.rnn_cell_fw, self.rnn_cell_bw, inputs, input_lens, dtype=tf.float32, swap_memory=True)
 
             # Concatenate the forward and backward hidden states
             out = tf.concat([fw_out, bw_out], 2)
@@ -195,7 +195,7 @@ class AnsPtr(object):
             # RNN timestep 1: feed context hidden states (inputs)
             # outputs is (batch_size, input_len, hidden_size)
             # state is (batch_size, hidden_size)
-            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32)
+            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32, swap_memory=True)
 
             state = tf.expand_dims(state, axis=1)
 
@@ -209,7 +209,7 @@ class AnsPtr(object):
             start_dist = tf.squeeze(attn_dist)
 
             # RNN timestep 2: feed attention output
-            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32)
+            outputs, state = tf.nn.dynamic_rnn(self.rnn_cell, attn_output, input_lens, dtype=tf.float32, swap_memory=True)
 
             state = tf.expand_dims(state, axis=1)
 

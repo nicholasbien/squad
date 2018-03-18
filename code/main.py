@@ -61,12 +61,12 @@ tf.app.flags.DEFINE_integer("num_epochs", 50, "Number of epochs to train. 0 mean
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
-tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
+tf.app.flags.DEFINE_integer("batch_size", 50, "Batch size to use")
 tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 400, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
-tf.app.flags.DEFINE_integer("max_word_len", 20, "The maximum word length of your model (for character embeddings)")
-tf.app.flags.DEFINE_integer("max_ans_len", 20, "Maximum span for any answer prediction")
+tf.app.flags.DEFINE_integer("max_word_len", 10, "The maximum word length of your model (for character embeddings)")
+tf.app.flags.DEFINE_integer("max_ans_len", 12, "Maximum span for any answer prediction")
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 
 # How often to print, save, eval

@@ -93,7 +93,10 @@ tf.app.flags.DEFINE_boolean("char_embed", False, "Determines whether or not we u
 tf.app.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
 
 # Flag for which output layer to use
-tf.app.flags.DEFINE_string("output", "ans_ptr", "Determines which output to use")
+tf.app.flags.DEFINE_string("output", "basic", "Determines which output to use")
+
+# Flag for which attention layer to use
+tf.app.flags.DEFINE_string("attn", "basic", "Determines which attention layer to use")
 
 
 FLAGS = tf.app.flags.FLAGS

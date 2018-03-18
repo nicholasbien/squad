@@ -99,14 +99,39 @@ class CompleteModel(BaselineModel):
         context_hiddens = encoder.build_graph(context_input, self.context_mask) # (batch_size, context_len, hidden_size*2)
         question_hiddens = encoder.build_graph(question_input, self.qn_mask) # (batch_size, question_len, hidden_size*2)
 
-        ####################
-        # Bidaf Attn Layer
-        ####################
 
-        # Use context hidden states to attend to question hidden states
-        attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
-        _, attn_output = attn_layer.build_graph(context_hiddens, question_hiddens, self.context_mask, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*8)
-        # Concat attn_output to contexxt_hiddens to get blended_reps
+        if self.FLAGS.attn == 'bidaf':
+
+            ####################
+            # Bidaf Attn Layer
+            ####################
+
+            # Use context hidden states to attend to question hidden states
+            attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
+            _, attn_output = attn_layer.build_graph(context_hiddens, question_hiddens, self.context_mask, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*8)
+            # Concat attn_output to contexxt_hiddens to get blended_reps
+
+        elif self.FLAGS.attn == 'aoa':
+
+            #####################
+            # AoA Attn Layer
+            #####################
+
+            # Use context hidden states to attend to question hidden states
+            attn_layer = AoA(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2, len(self.word2id))
+            _, attn_output = attn_layer.build_graph(self.context_ids, question_hiddens, context_hiddens, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*2)
+
+        else:
+
+            ######################
+            # Basic Attn Layer
+            ######################
+
+            # Use context hidden states to attend to question hidden states
+            attn_layer = BasicAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
+            _, _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
+
+        # Blended representations for the input to the modeling layer
         blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*10)
 
         ####################
@@ -116,7 +141,7 @@ class CompleteModel(BaselineModel):
         # Bidaf layer after context and question attnetion is calculated. Based off oringinal BiDaf paper
 
         encoder2 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        bidaf_second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder1") # (batch_size, question_len, hidden_size*2)
+        second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder1") # (batch_size, question_len, hidden_size*2)
 
         ####################
         # Self Attn Layer
@@ -140,18 +165,18 @@ class CompleteModel(BaselineModel):
             ####################
 
             encoder3 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-            bidaf_third_layer = encoder3.build_graph(bidaf_second_layer_hiddens, self.context_mask, scope_name="BidafEncoder2") # (batch_size, question_len, hidden_size*2)
+            third_layer_hiddens = encoder3.build_graph(second_layer_hiddens, self.context_mask, scope_name="BidafEncoder2") # (batch_size, question_len, hidden_size*2)
 
             ####################
             # BiDAF Output Layer
             ####################
 
             bidaf_out = BiDAFOut(self.FLAGS.hidden_size, self.keep_prob)
-            self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, bidaf_third_layer, bidaf_third_layer, self.context_mask)
+            self.logits_start, self.probdist_start, self.logits_end, self.probdist_end = bidaf_out.build_graph(attn_output, second_layer_hiddens, third_layer_hiddens, self.context_mask)
 
         else:
 
-            final_context_reps = tf.contrib.layers.fully_connected(bidaf_second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
+            final_context_reps = tf.contrib.layers.fully_connected(second_layer_hiddens, num_outputs=self.FLAGS.hidden_size) # final_context_reps is shape (batch_size, context_len, hidden_size)
 
             if self.FLAGS.output == 'ans_ptr':
 
@@ -164,13 +189,13 @@ class CompleteModel(BaselineModel):
                 # Note this produces self.logits_start and self.probdist_start, both of which have shape (batch_size, context_len)
                 with vs.variable_scope("StartDist"):
                     softmax_layer_start = SimpleSoftmaxLayer()
-                    self.logits_start, self.probdist_start = softmax_layer_start.build_graph(blended_reps_final, self.context_mask)
+                    self.logits_start, self.probdist_start = softmax_layer_start.build_graph(final_context_reps, self.context_mask)
 
                 # Use softmax layer to compute probability distribution for end location
                 # Note this produces self.logits_end and self.probdist_end, both of which have shape (batch_size, context_len)
                 with vs.variable_scope("EndDist"):
                     softmax_layer_end = SimpleSoftmaxLayer()
-                    self.logits_end, self.probdist_end = softmax_layer_end.build_graph(blended_reps_final, self.context_mask)
+                    self.logits_end, self.probdist_end = softmax_layer_end.build_graph(final_context_reps, self.context_mask)
 
 
 

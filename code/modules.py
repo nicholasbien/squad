@@ -450,85 +450,83 @@ class AoA(object):
 
 class BiDAF(object):
 
-    def __init__(self, keep_prob, query_vec_size, doc_vec_size):
+    def __init__(self, keep_prob, H_vec_size, U_vec_size):
         self.keep_prob = keep_prob
-        self.query_vec_size = query_vec_size
-        self.doc_vec_size = doc_vec_size
+        self.H_vec_size = H_vec_size
+        self.U_vec_size = U_vec_size
 
 
-    def build_graph(self, documents, queries, documents_mask, queries_mask):
+    def build_graph(self, H, U, H_mask, U_mask):
 
         with vs.variable_scope("BiDAF"):
 
 
             # Calculate similarity matrix S:
 
-            # Tile queries and documents so that they have shape (batch_size, num_docs*num_queries, doc_vec_size)
-            query_shape = queries.get_shape()
-            doc_shape = documents.get_shape()
 
-            # Repeat the whole query matrix num_docs times
-            # aug_queries = tf.tile(queries, [1, doc_shape[1], 1]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            ########## SHAPES ##########
 
-            # Repeat each row of documents num_queries times
-            # aug_docs = tf.reshape(documents, [-1, doc_shape[1]*doc_shape[2], 1]) # shape (batch_size, num_docs*2*hidden, 1)
-            # aug_docs = tf.tile(aug_docs, [1, 1, query_shape[1]]) # shape (batch_size, num_docs*2*hidden, num_queries)
-            # aug_docs = tf.reshape(tf.transpose(aug_docs, perm=[0, 2, 1]), [-1, doc_shape[1]*query_shape[1], self.doc_vec_size]) # shape (batch_size, num_docs*num_queries, doc_vec_size)
+            H_shape = H.get_shape()
+            U_shape = U.get_shape()
 
-            # Perform element-wise multiplication on augmented data
-            # element_mult = tf.multiply(aug_queries, aug_docs) # shape (batch_size, num_docs*num_queries, doc_vec_size)
-            element_mult_test = tf.expand_dims(documents, 2) * tf.expand_dims(queries, 1) # shape (batch_size, num_docs, num_queries, doc_vec_size)
-            # print element_mult.get_shape(), element_mult_test.get_shape()
-
-            W_sim_mult = tf.get_variable("W_sim_mult", shape=(self.query_vec_size,), initializer=tf.contrib.layers.xavier_initializer())
-            weighted_mult = tf.tensordot(element_mult_test, W_sim_mult, axes=[[3],[0]])
+            ############################
 
 
-            # document_test = tf.tile(tf.expand_dims(documents, 2), [1, 1, query_shape[1], 1])
-            W_sim_docs = tf.get_variable("W_sim_docs", shape=(self.doc_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
-            # weighted_docs = tf.tensordot(document_test, W_sim_docs, axes=[[3],[0]])
-            weighted_docs = tf.tensordot(documents, W_sim_docs, [[2],[0]])
+            ########## SIMILARITY MATRIX ##########
 
-            # queries_test = tf.tile(tf.expand_dims(queries, 1), [1, doc_shape[1], 1, 1])
-            W_sim_queries = tf.get_variable("W_sim_queries", shape=(self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
-            # weighted_queries = tf.tensordot(queries_test, W_sim_queries, [[3],[0]])
-            weighted_queries = tf.transpose(tf.tensordot(queries, W_sim_queries, [[2],[0]]), perm=[0,2,1])
+            # Weighted Element-wise Multiplication
+            element_mult = tf.expand_dims(H, 2) * tf.expand_dims(U, 1) # shape (batch_size, num_docs, num_questions, doc_vec_size)
+            W_sim_mult = tf.get_variable("W_sim_mult", shape=(self.H_vec_size,), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_mult = tf.tensordot(element_mult, W_sim_mult, axes=[[3],[0]]) # shape (batch_size, num_docs, num_questions)
 
-            S = weighted_mult + weighted_docs + weighted_queries
+            # Weighted Document Multiplication
+            W_sim_H = tf.get_variable("W_sim_docs", shape=(self.H_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_H = tf.tensordot(H, W_sim_H, [[2],[0]]) # shape (batch_size, num_docs, 1)
+
+            # Weighted Question Multiplication
+            W_sim_U = tf.get_variable("W_sim_queries", shape=(self.U_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            weighted_U = tf.transpose(tf.tensordot(U, W_sim_U, [[2],[0]]), perm=[0,2,1]) # shape (batch_size, 1, num_questions)
+
+            # Similarity Matrix (addition instead of concatenation)
+            S = weighted_mult + weighted_H + weighted_U # shape (batch_size, num_docs, num_questions)
+
+            #######################################
 
 
-            # Concatenate augmented data and element_mult for S computation
-            # concat = tf.concat([aug_docs, aug_queries, element_mult], axis=2) # shape (batch_size, num_docs*num_queries, 6*doc_vec_size)
+            ########## MASKS ##########
 
-            # Weights for similarity matrix
-            # W_sim = tf.get_variable("W_sim", shape=(3*self.query_vec_size,1), initializer=tf.contrib.layers.xavier_initializer())
+            H_mask = tf.tile(tf.expand_dims(H_mask, -1), [1, 1, U_shape[1]]) # shape (batch_size, num_docs, num_questions)
+            U_mask = tf.transpose(tf.tile(tf.expand_dims(U_mask, -1), [1, 1, H_shape[1]]), perm=[0,2,1]) # shape (batch_size, num_docs, num_questions)
+            mask = tf.cast(tf.cast(H_mask, tf.bool) & tf.cast(U_mask, tf.bool), tf.int32) # shape (batch_size, num_docs, num_questions)
 
-            # Create S using weights and concat
-            # S = tf.tensordot(concat, W_sim, axes=[[2], [0]]) # shape (batch_size, num_docs*num_queries, 1)
-            # S = tf.reshape(S, [-1, doc_shape[1], query_shape[1]]) # shape (batch_size, num_docs, num_queries)
+            ###########################
 
-            # Compute softmax row-wise for Context to Query
-            # C2Q = tf.nn.softmax(S, dim=2) # shape (num_docs, num_queries)
-            q_mask = tf.transpose(tf.tile(tf.expand_dims(queries_mask, -1), [1, 1, doc_shape[1]]), perm=[0,2,1]) # shape (batch_size, num_docs, num_queries)
-            d_mask = tf.tile(tf.expand_dims(documents_mask, -1), [1, 1, query_shape[1]])
-            mask = tf.cast(tf.cast(q_mask, tf.bool) & tf.cast(d_mask, tf.bool), tf.int32) # shape (batch_size, num_docs, num_queries)
 
-            # Create Context to Query attention matrix
-            _, C2Q = masked_softmax(S, mask, 2)
-            a = tf.matmul(C2Q, queries) # shape (num_docs, doc_vec_size)
+            ########## CONTEXT TO QUESTION ##########       
 
-            # Take max across rows (i.e. max similarity for a single context word for all query words) and compute beta
+            _, A = masked_softmax(S, mask, 2)
+            U_hat = tf.matmul(A, U) # shape (batch_size, num_docs, doc_vec_size)
+
+            #########################################
+
+
+            ########## QUESTION TO CONTEXT ##########  
+
             masked_S = tf.multiply(S, tf.cast(mask, tf.float32)) # shape (batch_size, num_docs, num_queries)
             m = tf.reduce_max(masked_S, axis=2, keep_dims=True) # shape (batch_size, num_docs, 1)
-            beta = tf.nn.softmax(m, dim=1) # shape (batch_size, num_docs, 1)
-            # beta = masked_softmax(m, document_mask, 1) # shape (batch_size, num_docs, 1)
-            cprime = tf.matmul(tf.transpose(documents, perm=[0, 2, 1]), beta) # shape (batch_size, doc_vec_size, 1)
+            b = tf.transpose(tf.nn.softmax(m, dim=1), perm=[0,2,1]) # shape (batch_size, 1, num_docs)
+            h_hat = tf.matmul(b, H) # shape (batch_size, 1, H_vec_size)
+            # Q2C = tf.tile(h_hat, [1, H_shape[1], 1]) # shape (batch_size, num_docs, H_vec_size)
 
-            # Compute final output b by concatenation
-            doc_a_mult, doc_cp_mult = tf.multiply(documents, a), tf.multiply(documents, tf.transpose(cprime, perm=[0, 2, 1]))
-            b = tf.concat([documents, a, doc_a_mult, doc_cp_mult], axis=2) # shape (batch_size, num_docs, 4*doc_vec_size)
+            #########################################
 
-            return None, b
+            ########## G (OUTPUT) ##########
+
+            G = tf.concat([H, U_hat, tf.multiply(H, U_hat), tf.multiply(H, h_hat)], axis=2)
+
+            ################################
+
+            return None, G
 
 
 def masked_softmax(logits, mask, dim):

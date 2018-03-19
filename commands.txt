@@ -11,7 +11,7 @@ python main.py --experiment_name=aoa_ansptr --mode=train --model_name=complete -
 #
 Without DP_pred
 
-(9) Full BiDAF -- Will's Comp
+(9) Full BiDAF -- Will's Comp -- Optional
 python main.py --experiment_name=bidadf_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=False --attn=bidaf --adadelta=True
 
 (8) BiDAF with Ans Ptr
@@ -20,7 +20,7 @@ python main.py --experiment_name=bidadf_ansptr_no_dp_pred --mode=train --model_n
 #
 With DP_pred
 
-(2) Full BiDAF -- Will's Comp
+(2) Full BiDAF -- Will's Comp -- Optional
 python main.py --experiment_name=bidadf_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=bidaf --adadelta=True
 
 (1) BiDAF with AnsPtr
@@ -32,7 +32,7 @@ python main.py --experiment_name=bidadf_basic_out --mode=train --model_name=comp
 #
 Without char cnn
 
-(5) Full BiDAF no CNN -- Will's Comp
+(5) Full BiDAF no CNN -- Will's Comp -- Optional
 python main.py --experiment_name=bidadf_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=bidaf_out --dp_pred=True --attn=bidaf --adadelta=True
 
 (4) BiDAF with AnsPtr

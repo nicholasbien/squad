@@ -83,7 +83,7 @@ class CompleteModel(BaselineModel):
             ###########################
 
             # Char CNN embeddins
-            char_encoder = CNNCharacterEncoder(embed_size=20, filters=100, kernal_size=5, keep_prob=self.keep_prob)
+            char_encoder = CNNCharacterEncoder(embed_size=8, filters=32, kernal_size=5, keep_prob=0.5)
             context_char_embed = char_encoder.build_graph(self.context_char_ids, self.context_mask) # shape (batch_size, context_len, word_len)
             question_char_embed = char_encoder.build_graph(self.qn_char_ids, self.qn_mask) # shape (batch_size, question_len, word_len)
 

@@ -73,7 +73,12 @@ class BaselineModel(object):
         # (updates is what you need to fetch in session.run to do a gradient update)
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
         # lr = self.FLAGS.learning_rate / tf.sqrt(tf.cast(self.global_step, tf.float32) + 1)
-        opt = tf.train.AdamOptimizer(learning_rate=self.FLAGS.learning_rate) # you can try other optimizers
+
+        # Learning rate decay to match bidaf
+        if self.FLAGS.adadelta:
+            opt = tf.train.AdadeltaOptimizer(learning_rate=self.FLAGS.init_lr, rho=self.FLAGS.decay_rate, epsilon=1e-08)
+        else:
+            opt = tf.train.AdamOptimizer(learning_rate=self.FLAGS.learning_rate) # you can try other optimizers
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)

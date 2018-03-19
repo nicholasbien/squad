@@ -2,40 +2,40 @@
 Without BiDAF
 
 (6) Basic Attention + Answer Pointer
-python main.py --experiment_name=basic_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=basic
+python main.py --experiment_name=basic_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=basic --adadelta=True
 
 (7) AoA + Answer Pointer
-python main.py --experiment_name=aoa_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=aoa
+python main.py --experiment_name=aoa_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=aoa --adadelta=True
 #
 
 #
 Without DP_pred
 
 (9) Full BiDAF
-python main.py --experiment_name=bidadf_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=False --attn=bidaf
+python main.py --experiment_name=bidadf_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=False --attn=bidaf --adadelta=True
 
 (8) BiDAF with Ans Ptr
-python main.py --experiment_name=bidadf_ansptr_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=False --attn=bidaf
+python main.py --experiment_name=bidadf_ansptr_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=False --attn=bidaf --adadelta=True
 
 
 #
 With DP_pred
 
 (2) Full BiDAF
-python main.py --experiment_name=bidadf_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=bidaf
+python main.py --experiment_name=bidadf_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=bidaf --adadelta=True
 
 (1) BiDAF with AnsPtr
-python main.py --experiment_name=bidadf_ansptr_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=bidaf
+python main.py --experiment_name=bidadf_ansptr_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True
 
 (3) BiDAF with original output layer
-python main.py --experiment_name=bidadf_basic_out --mode=train --model_name=complete --char_embed=True --output=basic --dp_pred=True --attn=bidaf
+python main.py --experiment_name=bidadf_basic_out --mode=train --model_name=complete --char_embed=True --output=basic --dp_pred=True --attn=bidaf --adadelta=True
 
 #
 Without char cnn
 
 (5) Full BiDAF no CNN
-python main.py --experiment_name=bidadf_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=bidaf_out --dp_pred=True --attn=bidaf
+python main.py --experiment_name=bidadf_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=bidaf_out --dp_pred=True --attn=bidaf --adadelta=True
 
 (4) BiDAF with AnsPtr
-python main.py --experiment_name=bidadf_ansptr_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=ans_ptr --dp_pred=True --attn=bidaf
+python main.py --experiment_name=bidadf_ansptr_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True
 

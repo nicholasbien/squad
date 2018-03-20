@@ -4,9 +4,6 @@ Without BiDAF
 (4) Basic Attention + Answer Pointer
 python main.py --experiment_name=basic_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=basic --adadelta=True
 
-(6) AoA + Answer Pointer
-python main.py --experiment_name=aoa_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=aoa --adadelta=True
-#
 
 #
 Without DP_pred
@@ -16,9 +13,6 @@ python main.py --experiment_name=bidadf_ansptr_no_dp_pred --mode=train --model_n
 
 #
 With DP_pred
-
-(7) Full BiDAF -- Will's Comp -- Optional
-python main.py --experiment_name=bidadf_dp_pred --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=bidaf --adadelta=True
 
 (1) BiDAF with AnsPtr
 python main.py --experiment_name=bidadf_ansptr_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True

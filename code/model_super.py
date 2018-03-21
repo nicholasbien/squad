@@ -72,7 +72,13 @@ class BaselineModel(object):
         # Define optimizer and updates
         # (updates is what you need to fetch in session.run to do a gradient update)
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
-        opt = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate) # you can try other optimizers
+        # lr = self.FLAGS.learning_rate / tf.sqrt(tf.cast(self.global_step, tf.float32) + 1)
+
+        # Learning rate decay to match bidaf
+        if self.FLAGS.adadelta:
+            opt = tf.train.AdadeltaOptimizer(learning_rate=self.FLAGS.init_lr, rho=self.FLAGS.decay_rate, epsilon=1e-08)
+        else:
+            opt = tf.train.AdamOptimizer(learning_rate=self.FLAGS.learning_rate) # you can try other optimizers
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)
@@ -261,6 +267,7 @@ class BaselineModel(object):
             overall_max_prod = float('-inf')
             start_pos = -1
             end_pos = -1
+            overall_max_prod = float('-inf')
             for i in range(len(start_dist[batch])):
                 max_end_index = i + np.argmax(end_dist[batch,i:i+max_answer_len])
                 max_prod = start_dist[batch,i] * end_dist[batch,max_end_index]

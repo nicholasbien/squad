@@ -1,0 +1,28 @@
+#
+Without BiDAF
+
+(4) Basic Attention + Answer Pointer
+python main.py --experiment_name=basic_ansptr --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=basic --adadelta=True
+
+
+#
+Without DP_pred
+
+(5) BiDAF with Ans Ptr
+python main.py --experiment_name=bidadf_ansptr_no_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=False --attn=bidaf --adadelta=True
+
+#
+With DP_pred
+
+(1) BiDAF with AnsPtr
+python main.py --experiment_name=bidadf_ansptr_dp_pred --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True
+
+(2) BiDAF with original output layer
+python main.py --experiment_name=bidadf_basic_out --mode=train --model_name=complete --char_embed=True --output=basic --dp_pred=True --attn=bidaf --adadelta=True
+
+#
+Without char cnn
+
+(3) BiDAF with AnsPtr
+python main.py --experiment_name=bidadf_ansptr_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True
+

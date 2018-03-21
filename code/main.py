@@ -58,19 +58,21 @@ tf.app.flags.DEFINE_string("model_name", "baseline", "Name of the model for your
 tf.app.flags.DEFINE_integer("num_epochs", 50, "Number of epochs to train. 0 means train indefinitely")
 
 # Hyperparameters
+tf.app.flags.DEFINE_float("init_lr", 0.5, "Initial learning rate for Adadelta")
+tf.app.flags.DEFINE_float("decay_rate", 0.9, "Decay rate for Adadelta")
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
-tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use")
-tf.app.flags.DEFINE_integer("hidden_size", 200, "Size of the hidden states")
+tf.app.flags.DEFINE_integer("batch_size", 60, "Batch size to use")
+tf.app.flags.DEFINE_integer("hidden_size", 100, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 400, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
-tf.app.flags.DEFINE_integer("max_word_len", 10, "The maximum word length of your model (for character embeddings)")
-tf.app.flags.DEFINE_integer("max_ans_len", 20, "Maximum span for any answer prediction")
+tf.app.flags.DEFINE_integer("max_word_len", 12, "The maximum word length of your model (for character embeddings)")
+tf.app.flags.DEFINE_integer("max_ans_len", 12, "Maximum span for any answer prediction")
 tf.app.flags.DEFINE_integer("embedding_size", 100, "Size of the pretrained word vectors. This needs to be one of the available GloVe dimensions: 50/100/200/300")
 
 # How often to print, save, eval
-tf.app.flags.DEFINE_integer("print_every", 10, "How many iterations to do per print.")
+tf.app.flags.DEFINE_integer("print_every", 100, "How many iterations to do per print.")
 tf.app.flags.DEFINE_integer("save_every", 100, "How many iterations to do per save.")
 tf.app.flags.DEFINE_integer("eval_every", 1000, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
 tf.app.flags.DEFINE_integer("keep", 1, "How many checkpoints to keep. 0 indicates keep all (you shouldn't need to do keep all though - it's very storage intensive).")
@@ -93,7 +95,13 @@ tf.app.flags.DEFINE_boolean("char_embed", False, "Determines whether or not we u
 tf.app.flags.DEFINE_boolean("dp_pred", False, "Determines whether or not to use the Dynamic Programming prediction for BiDAF")
 
 # Flag for which output layer to use
-tf.app.flags.DEFINE_string("output", "ans_ptr", "Determines which output to use")
+tf.app.flags.DEFINE_string("output", "basic", "Determines which output to use")
+
+# Flag for which attention layer to use
+tf.app.flags.DEFINE_string("attn", "basic", "Determines which attention layer to use")
+
+# Flag for which optimizer to use
+tf.app.flags.DEFINE_boolean("adadelta", False, "Determines whether or not to use AdadeltaOptimizer")
 
 
 FLAGS = tf.app.flags.FLAGS

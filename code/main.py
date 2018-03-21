@@ -64,7 +64,7 @@ tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_float("dropout", 0.2, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 60, "Batch size to use")
-tf.app.flags.DEFINE_integer("hidden_size", 100, "Size of the hidden states")
+tf.app.flags.DEFINE_integer("hidden_size", 150, "Size of the hidden states")
 tf.app.flags.DEFINE_integer("context_len", 400, "The maximum context length of your model")
 tf.app.flags.DEFINE_integer("question_len", 30, "The maximum question length of your model")
 tf.app.flags.DEFINE_integer("max_word_len", 12, "The maximum word length of your model (for character embeddings)")
@@ -135,6 +135,8 @@ def initialize_model(session, model, train_dir, expect_exists):
 
 
 def main(unused_argv):
+    tf.set_random_seed(42)
+
     # Print an error message if you've entered flags incorrectly
     if len(unused_argv) != 1:
         raise Exception("There is a problem with how you entered flags: %s" % unused_argv)

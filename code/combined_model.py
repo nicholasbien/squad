@@ -30,7 +30,7 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, CNNCharacterEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn, BiDAFOut
+from modules import RNNEncoder, CNNCharacterEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr, SelfAttn, BiDAFOut, AoA
 from model_super import BaselineModel
 
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +94,7 @@ class CompleteModel(BaselineModel):
         ############################
         # Contextual Embedding Layer
         ############################
+
 
         encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
         context_hiddens = encoder.build_graph(context_input, self.context_mask) # (batch_size, context_len, hidden_size*2)

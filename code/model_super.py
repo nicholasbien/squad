@@ -32,6 +32,8 @@ from data_batcher import get_batch_generator
 from pretty_print import print_example
 from modules import RNNEncoder, SimpleSoftmaxLayer, BasicAttn, BiDAF, AnsPtr
 
+from keras.optimizers import Adam, TFOptimizer
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -78,7 +80,7 @@ class BaselineModel(object):
         if self.FLAGS.adadelta:
             opt = tf.train.AdadeltaOptimizer(learning_rate=self.FLAGS.init_lr, rho=self.FLAGS.decay_rate, epsilon=1e-08)
         else:
-            opt = tf.train.AdamOptimizer(learning_rate=self.FLAGS.learning_rate) # you can try other optimizers
+            opt = tf.train.AdamOptimizer(learning_rate=self.FLAGS.learning_rate)
         self.updates = opt.apply_gradients(zip(clipped_gradients, params), global_step=self.global_step)
 
         # Define savers (for checkpointing) and summaries (for tensorboard)

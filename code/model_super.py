@@ -266,6 +266,7 @@ class BaselineModel(object):
         end = []
 
         for batch in range(len(start_dist)):
+            overall_max_prod = float('-inf')
             start_pos = -1
             end_pos = -1
             overall_max_prod = float('-inf')

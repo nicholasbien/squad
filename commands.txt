@@ -45,7 +45,7 @@ python main.py --experiment_name=bidadf_ansptr_hidden_150 --mode=train --model_n
 python main.py --experiment_name=bidadf_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=bidaf_out --dp_pred=True --attn=bidaf
 
 (4) Basic Attention
-python main.py --experiment_name=basic --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=basic
+python main.py --experiment_name=basic --mode=train --model_name=complete --char_embed=True --output=basic --dp_pred=True --attn=basic
 
 
 

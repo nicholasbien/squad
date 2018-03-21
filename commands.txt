@@ -26,3 +26,26 @@ Without char cnn
 (3) BiDAF with AnsPtr
 python main.py --experiment_name=bidadf_ansptr_dp_pred_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=ans_ptr --dp_pred=True --attn=bidaf --adadelta=True
 
+
+
+
+# FINAL COMMANDS TO RUN
+
+WILL
+
+(1) Original BiDAF
+python main.py --experiment_name=original_bidaf_hidden_150 --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=bidaf
+
+NICK
+
+(2) BiDAF with AnsPtr
+python main.py --experiment_name=bidadf_ansptr_hidden_150 --mode=train --model_name=complete --char_embed=True --output=ans_ptr --dp_pred=True --attn=bidaf
+
+(3) BiDAF Without Char CNN
+python main.py --experiment_name=bidadf_no_char_cnn --mode=train --model_name=complete --char_embed=False --output=bidaf_out --dp_pred=True --attn=bidaf
+
+(4) Basic Attention
+python main.py --experiment_name=basic --mode=train --model_name=complete --char_embed=True --output=bidaf_out --dp_pred=True --attn=basic
+
+
+

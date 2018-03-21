@@ -110,7 +110,6 @@ class CompleteModel(BaselineModel):
             # Use context hidden states to attend to question hidden states
             attn_layer = BiDAF(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
             _, attn_output = attn_layer.build_graph(context_hiddens, question_hiddens, self.context_mask, self.qn_mask) # attn_output is shape (batch_size, context_len, hidden_size*8)
-            # Concat attn_output to contexxt_hiddens to get blended_reps
 
         elif self.FLAGS.attn == 'aoa':
 
@@ -133,7 +132,7 @@ class CompleteModel(BaselineModel):
             _, _, attn_output = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens) # attn_output is shape (batch_size, context_len, hidden_size*2)
 
         # Blended representations for the input to the modeling layer
-        blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*10)
+        # blended_reps = tf.concat([context_hiddens, attn_output], axis=2) # (batch_size, context_len, hidden_size*10)
 
         ####################
         # Bidaf second bidirection layer
@@ -142,7 +141,7 @@ class CompleteModel(BaselineModel):
         # Bidaf layer after context and question attnetion is calculated. Based off oringinal BiDaf paper
 
         encoder2 = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-        second_layer_hiddens = encoder2.build_graph(blended_reps, self.context_mask, scope_name="BidafEncoder1") # (batch_size, question_len, hidden_size*2)
+        second_layer_hiddens = encoder2.build_graph(attn_output, self.context_mask, scope_name="BidafEncoder1") # (batch_size, question_len, hidden_size*2)
 
         ####################
         # Self Attn Layer
